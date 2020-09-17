@@ -2,6 +2,8 @@
 !!  This file contains the Noah land surface scheme driver.
 
 !> This module contains the CCPP-compliant Noah land surface scheme driver.
+!> JP: attempt to bring in surface loop, and sfc_diff into land itself 
+
       module lsm_noah
 
       use set_soilveg_mod,  only: set_soilveg
@@ -11,9 +13,17 @@
       private
 
       public :: lsm_noah_init, lsm_noah_run, lsm_noah_finalize
-
+      public :: sfc_diff_lnd_init, sfc_diff_lnd_run, sfc_diff_lnd_finalize
+      public :: noah_loop_run
+      
       contains
 
+      subroutine sfc_diff_lnd_init
+      end subroutine sfc_diff_lnd_init
+
+      subroutine sfc_diff_lnd_finalize
+      end subroutine sfc_diff_lnd_finalize
+      
 !>\ingroup Noah_LSM
 !! This subroutine contains the CCPP-compliant lsm_noah_init to initialize soil vegetation.
 !! \section arg_table_lsm_noah_init Argument Table
@@ -54,7 +64,18 @@
 
       end subroutine lsm_noah_finalize
 
+! ===================================================================== !
+!  description: loops sfc_drv                                                         !
+! ===================================================================== !
 
+      subroutine noah_loop_run
+
+      integer :: iter
+      
+      
+      end subroutine noah_loop_run
+
+      
 ! ===================================================================== !
 !  description:                                                         !
 !                                                                       !
