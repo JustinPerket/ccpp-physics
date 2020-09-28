@@ -40,13 +40,52 @@
       subroutine  noah_loop_finalize
       end subroutine  noah_loop_finalize
       
-      subroutine noah_loop_run
+      subroutine noah_loop_run(im, wind, flag_guess,
+     & flag_iter, errmsg, errflg)
 
+      use machine,           only: kind_phys
+
+      implicit none
+      
       integer :: iter
+      ! Interface variables  
+      integer, intent(in)                                :: im
+      real(kind=kind_phys), dimension(im), intent(in)    :: wind
+      logical,              dimension(im), intent(inout) :: flag_guess
+      logical,              dimension(im), intent(inout) :: flag_iter
+
+      character(len=*), intent(out) :: errmsg
+      integer,          intent(out) :: errflg
+
+      ! Local variables                                                                                                               
+      integer :: i
+
+      ! Initialize CCPP error handling variables                                                                                      
+      errmsg = ''
+      errflg = 0
 
       do iter=1,2
+         
+         ! GFS_surface_loop_control_part1
+         do i=1,im
+            if (iter == 1 .and. wind(i) < 2.0d0) then
+               flag_guess(i) = .true.
+            endif
+         enddo
 
-      enddo
+         do i = 1, im
+            flag_iter(i)  = .false.
+            flag_guess(i) = .false.
+
+             ! FS_surface_loop_control_part2
+            if (iter == 1 .and. wind(i) < 2.0d0) then
+                  flag_iter(i) = .true.
+            endif
+
+         enddo
+
+         
+      enddo ! iter
 
 
       end subroutine noah_loop_run
