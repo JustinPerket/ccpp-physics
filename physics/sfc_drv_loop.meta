@@ -749,3 +749,111 @@
   kind = kind_phys
   intent = inout
   optional = F
+[z1]
+  standard_name = height_above_ground_at_lowest_model_layer
+  long_name = height above ground at 1st model layer
+  units = m
+  dimensions = (horizontal_dimension)
+  type = real
+  kind = kind_phys
+  intent = in
+  optional = F
+[prsik1]
+  standard_name = dimensionless_exner_function_at_lowest_model_interface
+  long_name = dimensionless Exner function at the ground surface
+  units = none
+  dimensions = (horizontal_dimension)
+  type = real
+  kind = kind_phys
+  intent = in
+  optional = F
+[z0pert]
+  standard_name = perturbation_of_momentum_roughness_length
+  long_name = perturbation of momentum roughness length
+  units = frac
+  dimensions = (horizontal_dimension)
+  type = real
+  kind = kind_phys
+  intent = in
+  optional = F
+[ztpert]
+  standard_name = perturbation_of_heat_to_momentum_roughness_length_ratio
+  long_name = perturbation of heat to momentum roughness length ratio
+  units = frac
+  dimensions = (horizontal_dimension)
+  type = real
+  kind = kind_phys
+  intent = in
+  optional = F
+[ustar_lnd]
+  standard_name = surface_friction_velocity_over_land
+  long_name = surface friction velocity over land
+  units = m s-1
+  dimensions = (horizontal_dimension)
+  type = real
+  kind = kind_phys
+  intent = inout
+  optional = F
+[rb_lnd]
+  standard_name = bulk_richardson_number_at_lowest_model_level_over_land
+  long_name = bulk Richardson number at the surface over land
+  units = none
+  dimensions = (horizontal_dimension)
+  type = real
+  kind = kind_phys
+  intent = inout
+  optional = F
+[fm_lnd]
+  standard_name = Monin_Obukhov_similarity_function_for_momentum_over_land
+  long_name = Monin-Obukhov similarity function for momentum over land
+  units = none
+  dimensions = (horizontal_dimension)
+  type = real
+  kind = kind_phys
+  intent = inout
+  optional = F
+[fh_lnd]
+  standard_name = Monin_Obukhov_similarity_function_for_heat_over_land
+  long_name = Monin-Obukhov similarity function for heat over land
+  units = none
+  dimensions = (horizontal_dimension)
+  type = real
+  kind = kind_phys
+  intent = inout
+  optional = F
+[fm10_lnd]
+  standard_name = Monin_Obukhov_similarity_function_for_momentum_at_10m_over_land
+  long_name = Monin-Obukhov similarity parameter for momentum at 10m over land
+  units = none
+  dimensions = (horizontal_dimension)
+  type = real
+  kind = kind_phys
+  intent = inout
+  optional = F
+[fh2_lnd]
+  standard_name = Monin_Obukhov_similarity_function_for_heat_at_2m_over_land
+  long_name = Monin-Obukhov similarity parameter for heat at 2m over land
+  units = none
+  dimensions = (horizontal_dimension)
+  type = real
+  kind = kind_phys
+  intent = inout
+  optional = F
+[stress_lnd]
+  standard_name = surface_wind_stress_over_land
+  long_name = surface wind stress over land
+  units = m2 s-2
+  dimensions = (horizontal_dimension)
+  type = real
+  kind = kind_phys
+  intent = inout
+  optional = F
+[ustar_lnd]
+  standard_name = surface_friction_velocity_over_land
+  long_name = surface friction velocity over land
+  units = m s-1
+  dimensions = (horizontal_dimension)
+  type = real
+  kind = kind_phys
+  intent = inout
+  optional = F
