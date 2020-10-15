@@ -781,7 +781,7 @@
   kind = kind_phys
   intent = inout
   optional = F
-[stress_lnd]
+[stress]
   standard_name = surface_wind_stress_over_land
   long_name = surface wind stress over land
   units = m2 s-2

@@ -68,13 +68,13 @@ contains
        smcwlt2, smcref2, wet1,                                      &
                                 !! ARGS FROM  stab_prep_lnd (minus those from noah
                                 !  ---  inputs:
-       dry,prsik1,z0pert,ztpert,ustar_lnd,                           &
+       dry,prsik1,z0pert,ztpert,ustar,                           &
                                 !  ---  outputs:
                                 !! ARGS FROM stability (minus those above)
                                 !  ---  inputs:
                                 !  ---  outputs:
        rb_lnd, fm_lnd, fh_lnd, fm10_lnd, fh2_lnd,                   &
-       stress_lnd,                                                  &           
+       stress,                                                  &           
                                 !!
        errmsg, errflg                                               &
        )
@@ -111,8 +111,8 @@ contains
     integer, dimension(im), intent(in) :: soiltyp, vegtype, slopetyp
 
     real (kind=kind_phys), dimension(im), intent(in) :: ps,           &
-         t1, q1, sigmaf, sfcemis, dlwflx, dswsfc, snet, tg3, cm,      &
-         ch, prsl1, prslki, wind, shdmin, shdmax,                     &
+         t1, q1, sigmaf, sfcemis, dlwflx, dswsfc, snet, tg3,          &
+         prsl1, prslki, wind, shdmin, shdmax,                     &
          snoalb, sfalb, zf,                                           &
          bexppert, xlaipert, vegfpert
 
@@ -124,8 +124,9 @@ contains
 
     !     ---  in/out:
     real (kind=kind_phys), dimension(im), intent(inout) :: weasd,     &
-         snwdph, tskin, tprcp, srflag, canopy, trans, tsurf, z0rl
-
+         snwdph, tskin, tprcp, srflag, canopy, trans, tsurf, z0rl,    &
+         cm, ch
+    
     real (kind=kind_phys), dimension(im,km), intent(inout) ::         &
          smc, stc, slc
 
@@ -139,7 +140,7 @@ contains
     integer, parameter  :: kp = kind_phys
     !  ---  inputs:
     real(kind=kind_phys),  dimension(im), intent(in) :: prsik1,    &
-         z0pert,ztpert,ustar_lnd
+         z0pert,ztpert
     !  ---  outputs:
 
     !  ---  locals:
@@ -150,7 +151,7 @@ contains
 
 !!!     for stability      ----------------------------------------------
     real(kind=kind_phys), dimension(im), intent(inout) :: rb_lnd, fm_lnd,    &
-         fh_lnd, fm10_lnd, fh2_lnd,stress_lnd
+         fh_lnd, fm10_lnd, fh2_lnd,stress,ustar
 
 
     real(kind=kind_phys), parameter :: qmin=1.0e-8_kp
@@ -193,7 +194,7 @@ contains
                      (zf(i),prsik1(i),sigmaf(i),vegtype(i),shdmax(i),  &
                      ivegsrc,z0pert(i),ztpert(i),                      &
                      tskin(i),tsurf(i),z0rl(i),            &
-                     ustar_lnd(i),virtfac,                             &
+                     ustar(i),virtfac,                             &
                                 !     ---  outputs:
                      z0max,ztmax,tvs   ) 
 
@@ -203,8 +204,8 @@ contains
                      z0max, ztmax, tvs, grav,                         &
                                 !     ---  outputs:
                      rb_lnd(i), fm_lnd(i), fh_lnd(i), fm10_lnd(i),    &
-                     fh2_lnd(i),cm_lnd(i), ch_lnd(i), stress_lnd(i),  &
-                     ustar_lnd(i)  )
+                     fh2_lnd(i),cm(i), ch(i), stress(i),  &
+                     ustar(i)  )
 
                 !     lsm_noah
                 call lsm_noah_run                                               &
