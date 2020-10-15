@@ -1,7 +1,7 @@
 [ccpp-table-properties]
   name = noah_loop
   type = scheme
-  dependencies = funcphys.f90,machine.F,set_soilveg.f
+  dependencies = funcphys.f90,machine.F,set_soilveg.f,sfc_drv.f
 
 
 ########################################################################
@@ -102,23 +102,6 @@
   dimensions = (horizontal_dimension)
   type = logical
   intent = inout
-  optional = F
-[errmsg]
-  standard_name = ccpp_error_message
-  long_name = error message for error handling in CCPP
-  units = none
-  dimensions = ()
-  type = character
-  kind = len=*
-  intent = out
-  optional = F
-[errflg]
-  standard_name = ccpp_error_flag
-  long_name = error flag for error handling in CCPP
-  units = flag
-  dimensions = ()
-  type = integer
-  intent = out
   optional = F
 [km]
   standard_name = soil_vertical_dimension
@@ -394,44 +377,12 @@
   kind = kind_phys
   intent = in
   optional = F
-[flag_iter]
-  standard_name = flag_for_iteration
-  long_name = flag for iteration
-  units = flag
-  dimensions = (horizontal_dimension)
-  type = logical
-  intent = in
-  optional = F
-[flag_guess]
-  standard_name = flag_for_guess_run
-  long_name = flag for guess run
-  units = flag
-  dimensions = (horizontal_dimension)
-  type = logical
-  intent = in
-  optional = F
 [lheatstrg]
   standard_name = flag_for_canopy_heat_storage
   long_name = flag for canopy heat storage parameterization
   units = flag
   dimensions = ()
   type = logical
-  intent = in
-  optional = F
-[isot]
-  standard_name = soil_type_dataset_choice
-  long_name = soil type dataset choice
-  units = index
-  dimensions = ()
-  type = integer
-  intent = in
-  optional = F
-[ivegsrc]
-  standard_name = vegetation_type_dataset_choice
-  long_name = land use dataset choice
-  units = index
-  dimensions = ()
-  type = integer
   intent = in
   optional = F
 [bexppert]
@@ -749,15 +700,6 @@
   kind = kind_phys
   intent = inout
   optional = F
-[z1]
-  standard_name = height_above_ground_at_lowest_model_layer
-  long_name = height above ground at 1st model layer
-  units = m
-  dimensions = (horizontal_dimension)
-  type = real
-  kind = kind_phys
-  intent = in
-  optional = F
 [prsik1]
   standard_name = dimensionless_exner_function_at_lowest_model_interface
   long_name = dimensionless Exner function at the ground surface
@@ -848,12 +790,20 @@
   kind = kind_phys
   intent = inout
   optional = F
-[ustar_lnd]
-  standard_name = surface_friction_velocity_over_land
-  long_name = surface friction velocity over land
-  units = m s-1
-  dimensions = (horizontal_dimension)
-  type = real
-  kind = kind_phys
-  intent = inout
+[errmsg]
+  standard_name = ccpp_error_message
+  long_name = error message for error handling in CCPP
+  units = none
+  dimensions = ()
+  type = character
+  kind = len=*
+  intent = out
+  optional = F
+[errflg]
+  standard_name = ccpp_error_flag
+  long_name = error flag for error handling in CCPP
+  units = flag
+  dimensions = ()
+  type = integer
+  intent = out
   optional = F

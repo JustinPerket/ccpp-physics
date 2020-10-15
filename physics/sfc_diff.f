@@ -11,7 +11,8 @@
       implicit none
 
       public :: sfc_diff_init, sfc_diff_run, sfc_diff_finalize
-
+      public :: stab_prep_lnd,stability
+      
       private
 
       real (kind=kind_phys), parameter :: ca=0.4_kind_phys  ! ca - von karman constant
@@ -172,73 +173,24 @@
 !  compute stability dependent exchange coefficients
 !  this portion of the code is presently suppressed
 !
-          if (dry(i)) then ! Some land
-#ifdef GSD_SURFACE_FLUXES_BUGFIX
-            tvs   = half * (tsurf_lnd(i)+tskin_lnd(i))/prsik1(i)
-     &                   * virtfac
-#else
-            tvs   = half * (tsurf_lnd(i)+tskin_lnd(i)) * virtfac
-#endif
-            z0max = max(zmin, min(0.01_kp * z0rl_lnd(i), z1(i)))
-!** xubin's new z0  over land
-            tem1  = one - shdmax(i)
-            tem2  = tem1 * tem1
-            tem1  = one  - tem2
+          if (dry(i)) then      ! Some land
 
-            if( ivegsrc == 1 ) then
+            call stab_prep_lnd
+!  ---  inputs:
+     &            (z1(i),prsik1(i),sigmaf(i),vegtype(i),shdmax(i),
+     &            ivegsrc,z0pert(i),ztpert(i),
+     &            tskin_lnd(i),tsurf_lnd(i),z0rl_lnd(i),
+     &            ustar_lnd(i),virtfac,
+!  ---  outputs:
+     &            z0max,ztmax,tvs   ) 
+!            call stab_prep_lnd
+!!  ---  inputs:
+!     &            (z1(i),prsik1(i),sigmaf(i),vegtype(i),shdmax,
+!     &            ivegsrc,z0pert,ztpert,tskin_lnd,tsurf_lnd,z0rl_lnd,
+!     &            ustar_lnd,virtfac,
+!!  ---  outputs:
+!     &            z0max,ztmax,tvs   ) 
 
-              if (vegtype(i) == 10) then
-                z0max = exp( tem2*log01 + tem1*log07 )
-              elseif (vegtype(i) == 6) then
-                z0max = exp( tem2*log01 + tem1*log05 )
-              elseif (vegtype(i) == 7) then
-!               z0max = exp( tem2*log01 + tem1*log01 )
-                z0max = 0.01_kp
-              elseif (vegtype(i) == 16) then
-!               z0max = exp( tem2*log01 + tem1*log01 )
-                z0max = 0.01_kp
-              else
-                z0max = exp( tem2*log01 + tem1*log(z0max) )
-              endif
-
-            elseif (ivegsrc == 2 ) then
-
-              if (vegtype(i) == 7) then
-                z0max = exp( tem2*log01 + tem1*log07 )
-              elseif (vegtype(i) == 8) then
-                z0max = exp( tem2*log01 + tem1*log05 )
-              elseif (vegtype(i) == 9) then
-!               z0max = exp( tem2*log01 + tem1*log01 )
-                z0max = 0.01_kp
-              elseif (vegtype(i) == 11) then
-!               z0max = exp( tem2*log01 + tem1*log01 )
-                z0max = 0.01_kp
-              else
-                z0max = exp( tem2*log01 + tem1*log(z0max) )
-              endif
-
-            endif
-! mg, sfc-perts: add surface perturbations to z0max over land
-            if (z0pert(i) /= zero ) then
-              z0max = z0max * (10.0_kp**z0pert(i))
-            endif
-
-            z0max = max(z0max, zmin)
-
-!           czilc = 10.0 ** (- (0.40/0.07) * z0) ! fei's canopy height dependance of czil
-            czilc = 0.8_kp
-
-            tem1  = 1.0_kp - sigmaf(i)
-            ztmax = z0max*exp( - tem1*tem1
-     &              * czilc*ca*sqrt(ustar_lnd(i)*(0.01/1.5e-05)))
-
-
-! mg, sfc-perts: add surface perturbations to ztmax/z0max ratio over land
-            if (ztpert(i) /= zero) then
-              ztmax = ztmax * (10.0_kp**ztpert(i))
-            endif
-            ztmax = max(ztmax, zmin)
-!
             call stability
 !  ---  inputs:
      &       (z1(i), snwdph_lnd(i), thv1, wind(i),
@@ -249,31 +201,13 @@
           endif ! Dry points
 
           if (icy(i)) then ! Some ice
-            tvs   = half * (tsurf_ice(i)+tskin_ice(i)) * virtfac
-            z0max = max(zmin, min(0.01_kp * z0rl_ice(i), z1(i)))
-!** xubin's new z0  over land and sea ice
-            tem1  = one - shdmax(i)
-            tem2  = tem1 * tem1
-            tem1  = one  - tem2
+             call stab_prep_ice
+!  ---  inputs:
+     &            (z1(i), sigmaf(i),shdmax(i),ivegsrc,virtfac,
+     &            tskin_ice(i),tsurf_ice(i),z0rl_ice(i),ustar_ice(i),
+!  ---  outputs:
+     &            z0max,ztmax,tvs   ) 
 
-            if( ivegsrc == 1 ) then
-
-              z0max = exp( tem2*log01 + tem1*log(z0max) )
-            elseif (ivegsrc == 2 ) then
-              z0max = exp( tem2*log01 + tem1*log(z0max) )
-            endif
-
-            z0max = max(z0max, zmin)
-
-!           czilc = 10.0 ** (- (0.40/0.07) * z0) ! fei's canopy height
-!           dependance of czil
-            czilc = 0.8_kp
-
-            tem1  = 1.0_kp - sigmaf(i)
-            ztmax = z0max*exp( - tem1*tem1
-     &              * czilc*ca*sqrt(ustar_ice(i)*(0.01/1.5e-05)))
-            ztmax = max(ztmax, 1.0e-6)
-!
             call stability
 !  ---  inputs:
      &     (z1(i), snwdph_ice(i), thv1, wind(i),
@@ -281,91 +215,35 @@
 !  ---  outputs:
      &      rb_ice(i), fm_ice(i), fh_ice(i), fm10_ice(i), fh2_ice(i),
      &      cm_ice(i), ch_ice(i), stress_ice(i), ustar_ice(i))
-      endif ! Icy points
+         endif                  ! Icy points
 
 ! BWG: Everything from here to end of subroutine was after
 !      the stuff now put into "stability"
 
-          if (wet(i)) then ! Some open ocean
-            tvs          = half * (tsurf_wat(i)+tskin_wat(i)) * virtfac
-            z0           = 0.01_kp * z0rl_wat(i)
-            z0max        = max(zmin, min(z0,z1(i)))
-            ustar_wat(i) = sqrt(grav * z0 / charnock)
-            wind10m      = sqrt(u10m(i)*u10m(i)+v10m(i)*v10m(i))
+         if (wet(i)) then       ! Some open ocean
 
-!**  test xubin's new z0
+            call stab_prep_ocn
+!     ---  inputs:
+     &           (grav,z1(i),u10m(i),v10m(i),sfc_z0_type,
+     &           tskin_wat(i),tsurf_wat(i),z0rl_wat(i),virtfac,
+!     ---  outputs:
+     &           z0max,ztmax,tvs,ustar_wat(i),wind10m )
 
-!           ztmax  = z0max
-
-            restar = max(ustar_wat(i)*z0max*visi, 0.000001_kp)
-
-!           restar = log(restar)
-!           restar = min(restar,5.)
-!           restar = max(restar,-5.)
-!           rat    = aa1 + (bb1 + cc1*restar) * restar
-!           rat    = rat    / (1. + (bb2 + cc2*restar) * restar))
-!  rat taken from zeng, zhao and dickinson 1997
-
-            rat   = min(7.0_kp, 2.67_kp * sqrt(sqrt(restar)) - 2.57_kp)
-            ztmax = max(z0max * exp(-rat), zmin)
-!
-            if (sfc_z0_type == 6) then
-              call znot_t_v6(wind10m, ztmax)   ! 10-m wind,m/s, ztmax(m)
-            else if (sfc_z0_type == 7) then
-              call znot_t_v7(wind10m, ztmax)   ! 10-m wind,m/s, ztmax(m)
-            else if (sfc_z0_type > 0) then
-              write(0,*)'no option for sfc_z0_type=',sfc_z0_type
-              stop
-            endif
-!
             call stability
-!  ---  inputs:
-     &       (z1(i), snwdph_wat(i), thv1, wind(i),
-     &        z0max, ztmax, tvs, grav,
-!  ---  outputs:
-     &        rb_wat(i), fm_wat(i), fh_wat(i), fm10_wat(i), fh2_wat(i),
-     &        cm_wat(i), ch_wat(i), stress_wat(i), ustar_wat(i))
-!
-!  update z0 over ocean
-!
-            if (sfc_z0_type >= 0) then
-              if (sfc_z0_type == 0) then
-                z0 = (charnock / grav) * ustar_wat(i) * ustar_wat(i)
+!     ---  inputs:
+     &           (z1(i), snwdph_wat(i), thv1, wind(i),
+     &           z0max, ztmax, tvs, grav,
+!     ---  outputs:
+     &           rb_wat(i),fm_wat(i),fh_wat(i),fm10_wat(i),fh2_wat(i),
+     &           cm_wat(i),ch_wat(i),stress_wat(i),ustar_wat(i))
 
-! mbek -- toga-coare flux algorithm
-!               z0 = (charnock / grav) * ustar(i)*ustar(i) +  arnu/ustar(i)
-!  new implementation of z0
-!               cc = ustar(i) * z0 / rnu
-!               pp = cc / (1. + cc)
-!               ff = grav * arnu / (charnock * ustar(i) ** 3)
-!               z0 = arnu / (ustar(i) * ff ** pp)
-
-                if (redrag) then
-                  z0rl_wat(i) = 100.0_kp * max(min(z0, z0s_max),        &
-     &                                                 1.0e-7_kp)
-                else
-                  z0rl_wat(i) = 100.0_kp * max(min(z0,0.1_kp), 1.e-7_kp)
-                endif
-
-              elseif (sfc_z0_type == 6) then   ! wang
-                 call znot_m_v6(wind10m, z0)   ! wind, m/s, z0, m
-                 z0rl_wat(i) = 100.0_kp * z0   ! cm
-              elseif (sfc_z0_type == 7) then   ! wang
-                 call znot_m_v7(wind10m, z0)   ! wind, m/s, z0, m
-                 z0rl_wat(i) = 100.0_kp * z0   ! cm
-              else
-                 z0rl_wat(i) = 1.0e-4_kp
-              endif
-
-            elseif (z0rl_wav(i) <= 1.0e-7_kp) then
-              z0 = (charnock / grav) * ustar_wat(i) * ustar_wat(i)
-
-              if (redrag) then
-                z0rl_wat(i) = 100.0_kp * max(min(z0, z0s_max),1.0e-7_kp)
-              else
-                z0rl_wat(i) = 100.0_kp * max(min(z0,0.1_kp), 1.0e-7_kp)
-              endif
-            endif
+            call stab_post_ocn
+!     ---  inputs:
+     &           (grav,wind10m,redrag,sfc_z0_type,ustar_wat(i),
+     &           z0rl_wav(i),    
+!     ---  outputs:
+     &           z0rl_wat(i) )
+            
 
           endif              ! end of if(open ocean)
 !
@@ -767,6 +645,262 @@
 
         END SUBROUTINE znot_t_v7
 
+ 
+      subroutine stab_prep_lnd(z1,prsik1,sigmaf,vegtype,shdmax,         & ! inputs
+     &     ivegsrc,z0pert,ztpert,                                       & ! inputs
+     &     tskin_lnd,tsurf_lnd,z0rl_lnd,ustar_lnd,                      & ! inputs
+     &     virtfac,                                                     & ! inputs
+     &     z0max,ztmax,tvs   )                                          & ! outputs
+   
+      use machine , only : kind_phys
+      implicit none
+      
+      integer, parameter  :: kp = kind_phys
+      integer, intent(in) :: vegtype
+      integer, intent(in) :: ivegsrc
+!  ---  inputs:
+      real(kind=kind_phys), intent(in) ::                               &
+     &       z1, virtfac
+      real(kind=kind_phys), intent(in) ::                               &
+     &       prsik1,sigmaf,shdmax,z0pert,ztpert
+      real(kind=kind_phys), intent(in) ::                               &
+     &       tskin_lnd,tsurf_lnd,z0rl_lnd,ustar_lnd
+!  ---  outputs:
+      real(kind=kind_phys), intent(out) ::                              &
+     &      z0max,ztmax,tvs
 
+      real(kind=kind_phys) :: tem1,tem2,czilc
+      
+      real(kind=kind_phys), parameter ::
+     &        one=1.0_kp, zero=0.0_kp, half=0.5_kp
+     &,       zmin=1.0e-6_kp                                            &
+     &,       log01=log(0.01_kp), log05=log(0.05_kp), log07=log(0.07_kp)
+
+
+#ifdef GSD_SURFACE_FLUXES_BUGFIX
+            tvs   = half * (tsurf_lnd+tskin_lnd)/prsik1
+     &                   * virtfac
+#else
+            tvs   = half * (tsurf_lnd+tskin_lnd) * virtfac
+#endif
+            z0max = max(zmin, min(0.01_kp * z0rl_lnd, z1))
+!** xubin's new z0  over land
+            tem1  = one - shdmax
+            tem2  = tem1 * tem1
+            tem1  = one  - tem2
+
+            if( ivegsrc == 1 ) then
+
+              if (vegtype == 10) then
+                z0max = exp( tem2*log01 + tem1*log07 )
+              elseif (vegtype == 6) then
+                z0max = exp( tem2*log01 + tem1*log05 )
+              elseif (vegtype == 7) then
+!               z0max = exp( tem2*log01 + tem1*log01 )
+                z0max = 0.01_kp
+              elseif (vegtype == 16) then
+!               z0max = exp( tem2*log01 + tem1*log01 )
+                z0max = 0.01_kp
+              else
+                z0max = exp( tem2*log01 + tem1*log(z0max) )
+              endif
+
+            elseif (ivegsrc == 2 ) then
+
+              if (vegtype == 7) then
+                z0max = exp( tem2*log01 + tem1*log07 )
+              elseif (vegtype == 8) then
+                z0max = exp( tem2*log01 + tem1*log05 )
+              elseif (vegtype == 9) then
+!               z0max = exp( tem2*log01 + tem1*log01 )
+                z0max = 0.01_kp
+              elseif (vegtype == 11) then
+!               z0max = exp( tem2*log01 + tem1*log01 )
+                z0max = 0.01_kp
+              else
+                z0max = exp( tem2*log01 + tem1*log(z0max) )
+              endif
+
+            endif
+! mg, sfc-perts: add surface perturbations to z0max over land
+            if (z0pert /= zero ) then
+              z0max = z0max * (10.0_kp**z0pert)
+            endif
+
+            z0max = max(z0max, zmin)
+
+!           czilc = 10.0 ** (- (0.40/0.07) * z0) ! fei's canopy height dependance of czil
+            czilc = 0.8_kp
+
+            tem1  = 1.0_kp - sigmaf
+            ztmax = z0max*exp( - tem1*tem1
+     &              * czilc*ca*sqrt(ustar_lnd*(0.01/1.5e-05)))
+
+
+! mg, sfc-perts: add surface perturbations to ztmax/z0max ratio over land
+            if (ztpert /= zero) then
+              ztmax = ztmax * (10.0_kp**ztpert)
+            endif
+            ztmax = max(ztmax, zmin)
+
+      end subroutine stab_prep_lnd
+
+
+      subroutine stab_prep_ice(z1,sigmaf,shdmax,ivegsrc,virtfac,        & ! inputs
+     &     tskin_ice,tsurf_ice,z0rl_ice,ustar_ice,                      & ! inputs
+     &     z0max,ztmax,tvs   )                                          & ! outputs
+
+      use machine , only : kind_phys
+      implicit none
+      
+      integer, parameter  :: kp = kind_phys
+      integer, intent(in) :: ivegsrc
+!  ---  inputs:
+      real(kind=kind_phys), intent(in) ::  virtfac,                     &
+     &     z1,sigmaf,shdmax,tskin_ice,tsurf_ice,z0rl_ice,ustar_ice
+!  ---  outputs:
+      real(kind=kind_phys), intent(out) ::                              &
+     &      z0max,ztmax,tvs
+!  ---  locals
+      real(kind=kind_phys) :: czilc,tem1,tem2
+!
+      real(kind=kind_phys), parameter ::
+     &     one=1.0_kp,half=0.5_kp, log01=log(0.01_kp), zmin=1.0e-6_kp
+
+      
+            tvs   = half * (tsurf_ice+tskin_ice) * virtfac
+            z0max = max(zmin, min(0.01_kp * z0rl_ice, z1))
+!** xubin's new z0  over land and sea ice
+            tem1  = one - shdmax
+            tem2  = tem1 * tem1
+            tem1  = one  - tem2
+
+            if( ivegsrc == 1 ) then
+
+              z0max = exp( tem2*log01 + tem1*log(z0max) )
+            elseif (ivegsrc == 2 ) then
+              z0max = exp( tem2*log01 + tem1*log(z0max) )
+            endif
+
+            z0max = max(z0max, zmin)
+
+!           czilc = 10.0 ** (- (0.40/0.07) * z0) ! fei's canopy height
+!           dependance of czil
+            czilc = 0.8_kp
+
+            tem1  = 1.0_kp - sigmaf
+            ztmax = z0max*exp( - tem1*tem1
+     &              * czilc*ca*sqrt(ustar_ice*(0.01/1.5e-05)))
+            ztmax = max(ztmax, 1.0e-6)
+
+      end subroutine stab_prep_ice 
+
+      subroutine stab_prep_ocn(grav,z1,u10m,v10m,sfc_z0_type,           & ! inputs
+     &     tskin_wat,tsurf_wat,z0rl_wat,virtfac,                        & ! inputs
+     &     z0max,ztmax,tvs,ustar_wat,wind10m )                          & ! outputs
+
+      use machine , only : kind_phys
+      implicit none
+      
+      integer, parameter  :: kp = kind_phys
+!  ---  inputs:
+
+      integer, intent(in) :: sfc_z0_type ! option for calculating surface roughness length over ocean
+      real(kind=kind_phys), intent(in)    :: u10m,v10m,grav,z1,
+     &     tskin_wat,tsurf_wat,z0rl_wat,virtfac
+!     ---  outputs:
+      real(kind=kind_phys), intent(out)   :: z0max,ztmax,tvs,ustar_wat,
+     &     wind10m
+!     ---  locals
+      real(kind=kind_phys) :: rat, restar, z0
+!     
+      real(kind=kind_phys), parameter :: one=1.0_kp, half=0.5_kp,
+     &     charnock=.014_kp, zmin=1.0e-6_kp, vis=1.4e-5_kp, visi=one/vis
+
+      
+      tvs          = half * (tsurf_wat+tskin_wat) * virtfac
+      z0           = 0.01_kp * z0rl_wat
+      z0max        = max(zmin, min(z0,z1))
+      ustar_wat = sqrt(grav * z0 / charnock)
+      wind10m      = sqrt(u10m*u10m+v10m*v10m)
+
+!**  test xubin's new z0
+      restar = max(ustar_wat*z0max*visi, 0.000001_kp)
+!  rat taken from zeng, zhao and dickinson 1997
+
+      rat   = min(7.0_kp, 2.67_kp * sqrt(sqrt(restar)) - 2.57_kp)
+      ztmax = max(z0max * exp(-rat), zmin)
+!     
+      if (sfc_z0_type == 6) then
+         call znot_t_v6(wind10m, ztmax) ! 10-m wind,m/s, ztmax(m)
+      else if (sfc_z0_type == 7) then
+         call znot_t_v7(wind10m, ztmax) ! 10-m wind,m/s, ztmax(m)
+      else if (sfc_z0_type > 0) then
+         write(0,*)'no option for sfc_z0_type=',sfc_z0_type
+         stop
+      endif
+!     
+
+      end subroutine stab_prep_ocn
+      
+      subroutine stab_post_ocn(grav,wind10m,redrag,sfc_z0_type,         & ! inputs
+     &     ustar_wat,z0rl_wav,                                           & ! inputs
+     &     z0rl_wat)                                                    & ! outputs
+      
+!     
+!     update z0 over ocean
+!     
+      use machine , only : kind_phys
+      implicit none
+      
+      integer, parameter  :: kp = kind_phys
+!     ---  inputs:
+      integer, intent(in) :: sfc_z0_type ! option for calculating surface roughness length over ocean
+      logical, intent(in) :: redrag ! reduced drag coeff. flag for high wind over sea (j.han)
+      real(kind=kind_phys), intent(in)    :: grav, ustar_wat, wind10m,
+     &     z0rl_wav
+!     ---  inouts:
+      
+      real(kind=kind_phys), intent(inout) :: z0rl_wat
+!
+!     locals
+!
+      real(kind=kind_phys) :: z0
+      real(kind=kind_phys), parameter :: charnock=.014_kp,
+     &     z0s_max=.317e-2_kp
+
+      
+      if (sfc_z0_type >= 0) then
+         if (sfc_z0_type == 0) then
+            z0 = (charnock / grav) * ustar_wat * ustar_wat
+
+            if (redrag) then
+               z0rl_wat = 100.0_kp * max(min(z0, z0s_max), 1.0e-7_kp)
+            else
+               z0rl_wat = 100.0_kp * max(min(z0,0.1_kp), 1.e-7_kp)
+            endif
+
+         elseif (sfc_z0_type == 6) then ! wang
+            call znot_m_v6(wind10m, z0) ! wind, m/s, z0, m
+            z0rl_wat = 100.0_kp * z0 ! cm
+         elseif (sfc_z0_type == 7) then ! wang
+            call znot_m_v7(wind10m, z0) ! wind, m/s, z0, m
+            z0rl_wat = 100.0_kp * z0 ! cm
+         else
+            z0rl_wat = 1.0e-4_kp
+         endif
+
+      elseif (z0rl_wav <= 1.0e-7_kp) then
+         z0 = (charnock / grav) * ustar_wat * ustar_wat
+
+         if (redrag) then
+            z0rl_wat = 100.0_kp * max(min(z0, z0s_max),1.0e-7_kp)
+         else
+            z0rl_wat = 100.0_kp * max(min(z0,0.1_kp), 1.0e-7_kp)
+         endif
+      endif
+      
+      end subroutine stab_post_ocn
+      
 !---------------------------------
       end module sfc_diff
