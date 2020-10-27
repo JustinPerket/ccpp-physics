@@ -1,7 +1,7 @@
 [ccpp-table-properties]
   name = noah_loop
   type = scheme
-  dependencies = funcphys.f90,machine.F,set_soilveg.f,sfc_drv.f
+  dependencies = funcphys.f90,machine.F,set_soilveg.f,sfc_drv.f,sflx.f
 
 
 ########################################################################
@@ -70,14 +70,22 @@
   type = integer
   intent = in
   optional = F
-[iter]
-  standard_name = ccpp_loop_counter
-  long_name = loop counter for subcycling loops in CCPP
+[isot]
+  standard_name = soil_type_dataset_choice
+  long_name = soil type dataset choice
   units = index
   dimensions = ()
   type = integer
   intent = in
   optional = F
+[ivegsrc]
+  standard_name = vegetation_type_dataset_choice
+  long_name = land use dataset choice
+  units = index
+  dimensions = ()
+  type = integer
+  intent = in
+  optional = F  
 [wind]
   standard_name = wind_speed_at_lowest_model_layer
   long_name = wind speed at lowest model level
@@ -520,7 +528,7 @@
   kind = kind_phys
   intent = inout
   optional = F
-[zorl]
+[z0rl]
   standard_name = surface_roughness_length_over_land_interstitial
   long_name = surface roughness length over land  (temporary use as interstitial)
   units = cm
@@ -727,7 +735,7 @@
   kind = kind_phys
   intent = in
   optional = F
-[ustar_lnd]
+[ustar]
   standard_name = surface_friction_velocity_over_land
   long_name = surface friction velocity over land
   units = m s-1

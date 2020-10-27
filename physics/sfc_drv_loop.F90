@@ -68,7 +68,7 @@ contains
        smcwlt2, smcref2, wet1,                                      &
                                 !! ARGS FROM  stab_prep_lnd (minus those from noah
                                 !  ---  inputs:
-       dry,prsik1,z0pert,ztpert,ustar,                           &
+       prsik1,z0pert,ztpert,ustar,                           &
                                 !  ---  outputs:
                                 !! ARGS FROM stability (minus those above)
                                 !  ---  inputs:
@@ -95,7 +95,6 @@ contains
     !real(kind=kind_phys), dimension(im), intent(in)    :: wind
     logical,              dimension(im), intent(inout) :: flag_guess
     logical,              dimension(im), intent(inout) :: flag_iter
-    logical,              dimension(im), intent(in) :: dry
     character(len=*), intent(out) :: errmsg
     integer,          intent(out) :: errflg
 
@@ -160,41 +159,29 @@ contains
     errmsg = ''
     errflg = 0
 
-
+    ! revert
+    do i=1,im
+       flag_guess(i)   = .false.
+       flag_iter(i)    = .true.
+    end do
+       
     do iter=1,2
 
-       ! GFS_surface_loop_control_part1
-       do i=1,im
-          if (iter == 1 .and. wind(i) < 2.0d0) then
-             flag_guess(i) = .true.
-          endif
-       enddo
 
-       ! GFS_surface_loop_control_part2
-       do i = 1, im
-          flag_iter(i)  = .false.
-          flag_guess(i) = .false.
-
-          if (iter == 1 .and. wind(i) < 2.0d0) then
-             flag_iter(i) = .true.
-          endif
-
-       enddo
-
-       !     sfc_diff
+       !!!     sfc_diff
        do i=1,im
           if(flag_iter(i)) then
              virtfac = one + rvrdm1 * max(q1(i),qmin)
              thv1    = t1(i) * prslki(i) * virtfac
 
-             if (dry(i)) then ! Some land
+             if (land(i)) then ! Some land
 
                 call stab_prep_lnd                                     &
                                 !     ---  inputs:
                      (zf(i),prsik1(i),sigmaf(i),vegtype(i),shdmax(i),  &
                      ivegsrc,z0pert(i),ztpert(i),                      &
-                     tskin(i),tsurf(i),z0rl(i),            &
-                     ustar(i),virtfac,                             &
+                     tskin(i),tsurf(i),z0rl(i),                        &
+                     ustar(i),virtfac,                                 &
                                 !     ---  outputs:
                      z0max,ztmax,tvs   ) 
 
@@ -204,29 +191,52 @@ contains
                      z0max, ztmax, tvs, grav,                         &
                                 !     ---  outputs:
                      rb_lnd(i), fm_lnd(i), fh_lnd(i), fm10_lnd(i),    &
-                     fh2_lnd(i),cm(i), ch(i), stress(i),  &
+                     fh2_lnd(i),cm(i), ch(i), stress(i),              &
                      ustar(i)  )
+             end if ! land
+          end if ! flag_iter
+       end do ! im
 
-                !     lsm_noah
-                call lsm_noah_run                                               &
-                     ( im, km, grav, cp, hvap, rd, eps, epsm1, rvrdm1, ps,      & !  ---  inputs:
-                     t1, q1, soiltyp, vegtype, sigmaf,                          &
-                     sfcemis, dlwflx, dswsfc, snet, delt, tg3, cm, ch,          &
-                     prsl1, prslki, zf, land, wind, slopetyp,                   &
-                     shdmin, shdmax, snoalb, sfalb, flag_iter, flag_guess,      &
-                     lheatstrg, isot, ivegsrc,                                  &
-                     bexppert, xlaipert, vegfpert,pertvegf,                     & ! sfc perts, mgehne
+ !!! CCPP  GFS_surface_loop_control_part1
+       do i=1,im
+          if (iter == 1 .and. wind(i) < 2.0d0) then
+             flag_guess(i) = .true.
+          endif
+       enddo
+
+!!! Land Call
+!       do i=1,im
+             !     lsm_noah
+       call lsm_noah_run                                               &
+            ( im, km, grav, cp, hvap, rd, eps, epsm1, rvrdm1, ps,      & !  ---  inputs:
+            t1, q1, soiltyp, vegtype, sigmaf,                          &
+            sfcemis, dlwflx, dswsfc, snet, delt, tg3, cm, ch,          &
+            prsl1, prslki, zf, land, wind, slopetyp,                   &
+            shdmin, shdmax, snoalb, sfalb, flag_iter, flag_guess,      &
+            lheatstrg, isot, ivegsrc,                                  &
+            bexppert, xlaipert, vegfpert,pertvegf,                     & ! sfc perts, mgehne
                                 !     ---  in/outs:
-                     weasd, snwdph, tskin, tprcp, srflag, smc, stc, slc,        &
-                     canopy, trans, tsurf, z0rl,                                &
+            weasd, snwdph, tskin, tprcp, srflag, smc, stc, slc,        &
+            canopy, trans, tsurf, z0rl,                                &
                                 !     ---  outputs:
-                     sncovr1, qsurf, gflux, drain, evap, hflx, ep, runoff,      &
-                     cmm, chh, evbs, evcw, sbsno, snowc, stm, snohf,            &
-                     smcwlt2, smcref2, wet1, errmsg, errflg                     &
-                     )
-             endif            ! Dry points   
-          endif ! flag_iter
-       enddo ! im
+            sncovr1, qsurf, gflux, drain, evap, hflx, ep, runoff,      &
+            cmm, chh, evbs, evcw, sbsno, snowc, stm, snohf,            &
+            smcwlt2, smcref2, wet1, errmsg, errflg                     &
+            )
+!       end do ! im
+
+!!! GFS_surface_loop_control_part2
+       do i = 1, im
+          flag_iter(i)  = .false.
+          flag_guess(i) = .false.
+
+          if (iter == 1 .and. wind(i) < 2.0d0) then
+             if (land(i)) then
+                flag_iter(i) = .true.
+             end if
+          endif
+       enddo
+
     enddo ! iter
 
 

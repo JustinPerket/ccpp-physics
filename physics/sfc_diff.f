@@ -173,32 +173,27 @@
 !  compute stability dependent exchange coefficients
 !  this portion of the code is presently suppressed
 !
-          if (dry(i)) then      ! Some land
 
-            call stab_prep_lnd
-!  ---  inputs:
-     &            (z1(i),prsik1(i),sigmaf(i),vegtype(i),shdmax(i),
-     &            ivegsrc,z0pert(i),ztpert(i),
-     &            tskin_lnd(i),tsurf_lnd(i),z0rl_lnd(i),
-     &            ustar_lnd(i),virtfac,
-!  ---  outputs:
-     &            z0max,ztmax,tvs   ) 
-!            call stab_prep_lnd
+!     if (dry(i)) then      ! Some land
+!
+!!     do nothing
+!             call stab_prep_lnd
 !!  ---  inputs:
-!     &            (z1(i),prsik1(i),sigmaf(i),vegtype(i),shdmax,
-!     &            ivegsrc,z0pert,ztpert,tskin_lnd,tsurf_lnd,z0rl_lnd,
-!     &            ustar_lnd,virtfac,
+!     &            (z1(i),prsik1(i),sigmaf(i),vegtype(i),shdmax(i),
+!     &            ivegsrc,z0pert(i),ztpert(i),
+!     &            tskin_lnd(i),tsurf_lnd(i),z0rl_lnd(i),
+!     &            ustar_lnd(i),virtfac,
 !!  ---  outputs:
 !     &            z0max,ztmax,tvs   ) 
-
-            call stability
-!  ---  inputs:
-     &       (z1(i), snwdph_lnd(i), thv1, wind(i),
-     &        z0max, ztmax, tvs, grav,
-!  ---  outputs:
-     &        rb_lnd(i), fm_lnd(i), fh_lnd(i), fm10_lnd(i), fh2_lnd(i),
-     &        cm_lnd(i), ch_lnd(i), stress_lnd(i), ustar_lnd(i))
-          endif ! Dry points
+!
+!            call stability
+!!  ---  inputs:
+!     &       (z1(i), snwdph_lnd(i), thv1, wind(i),
+!     &        z0max, ztmax, tvs, grav,
+!!  ---  outputs:
+!     &        rb_lnd(i), fm_lnd(i), fh_lnd(i), fm10_lnd(i), fh2_lnd(i),
+!     &        cm_lnd(i), ch_lnd(i), stress_lnd(i), ustar_lnd(i))
+!          endif ! Dry points
 
           if (icy(i)) then ! Some ice
              call stab_prep_ice
