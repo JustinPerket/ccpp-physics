@@ -646,6 +646,8 @@
         END SUBROUTINE znot_t_v7
 
  
+!! Land code prior to stability call
+!! Justin Perket, 2020: moved to subroutine
       subroutine stab_prep_lnd(z1,prsik1,sigmaf,vegtype,shdmax,         & ! inputs
      &     ivegsrc,z0pert,ztpert,                                       & ! inputs
      &     tskin_lnd,tsurf_lnd,z0rl_lnd,ustar_lnd,                      & ! inputs
@@ -745,7 +747,8 @@
 
       end subroutine stab_prep_lnd
 
-
+!! Ice code prior to stability call
+!! Justin Perket, 2020: moved to subroutine
       subroutine stab_prep_ice(z1,sigmaf,shdmax,ivegsrc,virtfac,        & ! inputs
      &     tskin_ice,tsurf_ice,z0rl_ice,ustar_ice,                      & ! inputs
      &     z0max,ztmax,tvs   )                                          & ! outputs
@@ -795,6 +798,8 @@
 
       end subroutine stab_prep_ice 
 
+!! Ocean code prior to stability call
+!! Justin Perket, 2020: moved to subroutine
       subroutine stab_prep_ocn(grav,z1,u10m,v10m,sfc_z0_type,           & ! inputs
      &     tskin_wat,tsurf_wat,z0rl_wat,virtfac,                        & ! inputs
      &     z0max,ztmax,tvs,ustar_wat,wind10m )                          & ! outputs
@@ -843,6 +848,9 @@
 
       end subroutine stab_prep_ocn
       
+      
+!! Ocean code after stability call
+!! Justin Perket, 2020: moved to subroutine
       subroutine stab_post_ocn(grav,wind10m,redrag,sfc_z0_type,         & ! inputs
      &     ustar_wat,z0rl_wav,                                           & ! inputs
      &     z0rl_wat)                                                    & ! outputs
