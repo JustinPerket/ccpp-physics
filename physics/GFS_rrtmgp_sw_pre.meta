@@ -65,7 +65,7 @@
   kind = len=3
   intent = in
   optional = F
-[lsswr]
+[doSWrad]
   standard_name = flag_to_calc_sw
   long_name = logical flags for sw radiation calls
   units = flag
@@ -154,15 +154,24 @@
   kind = kind_phys
   intent = in
   optional = F
-[tsfc]
-  standard_name = surface_skin_temperature
-  long_name = surface skin temperature
+[tsfg]
+  standard_name = surface_ground_temperature_for_radiation
+  long_name = surface ground temperature for radiation
   units = K
   dimensions = (horizontal_loop_extent)
   type = real
   kind = kind_phys
   intent = in
   optional = F
+[tsfa]
+  standard_name = surface_air_temperature_for_radiation
+  long_name = lowest model layer air temperature for radiation
+  units = K
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  intent = in
+  optional = F 
 [hprime]
   standard_name = standard_deviation_of_subgrid_orography
   long_name = standard deviation of subgrid orography
@@ -297,15 +306,6 @@
   type = ty_gas_optics_rrtmgp
   intent = in
   optional = F
-[alb1d]
-  standard_name = surface_albedo_perturbation
-  long_name = surface albedo perturbation
-  units = frac
-  dimensions = (horizontal_loop_extent)
-  type = real
-  kind = kind_phys
-  intent = out
-  optional = F
 [sfc_alb_nir_dir]
   standard_name = surface_albedo_nearIR_direct
   long_name = near-IR (direct) surface albedo (sfc_alb_nir_dir)
@@ -365,7 +365,7 @@
   dimensions = (horizontal_loop_extent)
   type = real
   kind = kind_phys
-  intent = out
+  intent = inout
   optional = F
 [coszdg]
   standard_name = daytime_mean_cosz_over_rad_call_period
@@ -374,7 +374,7 @@
   dimensions = (horizontal_loop_extent)
   type = real
   kind = kind_phys
-  intent = out
+  intent = inout
   optional = F    
 [sfc_alb_dif]
   standard_name = surface_diffused_shortwave_albedo
@@ -383,7 +383,7 @@
   dimensions = (horizontal_loop_extent)
   type = real
   kind = kind_phys  
-  intent = out
+  intent = inout
   optional = F  
 [errmsg]
   standard_name = ccpp_error_message
