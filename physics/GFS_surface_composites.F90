@@ -571,6 +571,7 @@ contains
             snowd(i)  = snowd_ice(i)
            !tprcp(i)  = cice(i)*tprcp_ice(i) + (one-cice(i))*tprcp_wat(i)
             qss(i)    = qss_ice(i)
+            tsfc(i)   = tsfc_ice(i)
             evap(i)   = evap_ice(i)
             hflx(i)   = hflx_ice(i)
             qss(i)    = qss_ice(i)
@@ -606,7 +607,7 @@ contains
               tsfco(i) = tsfc(i)
             endif
             tsfcl(i)  = tsfc(i)
-            do k=1,kice ! store tiice in stc to reduce output in the nonfrac grid case
+            do k=1,min(kice,km) ! store tiice in stc to reduce output in the nonfrac grid case
               stc(i,k) = tiice(i,k)
             end do
           endif
