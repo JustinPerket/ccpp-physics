@@ -1347,6 +1347,23 @@
   kind = kind_phys
   intent = out
   optional = F
+[soiltyp]
+  standard_name = soil_type_classification
+  long_name = soil type at each grid cell
+  units = index
+  dimensions = (horizontal_loop_extent)
+  type = integer
+  intent = in
+  optional = F
+[soiltyp_cpl]
+  standard_name = soil_type_classification_for_coupling
+  long_name = soil type at each grid cell for coupling
+  units = index
+  dimensions = (horizontal_loop_extent)
+  type = integer
+  kind = kind_phys
+  intent = inout
+  optional = F
 [errmsg]
   standard_name = ccpp_error_message
   long_name = error message for error handling in CCPP
