@@ -213,12 +213,16 @@
         adjsfcdlw, adjsfcdsw, adjnirbmd, adjnirdfd, adjvisbmd, adjvisdfd, adjsfculw, adjsfculw_wat, adjnirbmu, adjnirdfu,           &
         adjvisbmu, adjvisdfu,t2m, q2m, u10m, v10m, tsfc, tsfc_wat, pgr, xcosz, evbs, evcw, trans, sbsno, snowc, snohf,              &
         epi, gfluxi, t1, q1, u1, v1, &
-        soiltyp, & ! JP add
-        dlwsfci_cpl, dswsfci_cpl, dlwsfc_cpl, dswsfc_cpl, dnirbmi_cpl, dnirdfi_cpl, dvisbmi_cpl,       &
+        soiltyp , vegtype , sigmaf  , sfcemis , dlwflx  , snet    , tg3     , cm      , ch      ,   & ! JP add
+        prsl1   , prslki  , zf      , land    , slopetyp, shdmin  , shdmax  , snoalb  , sfalb   ,   & ! JP add
+        bexppert, xlaipert, vegfpert,                                                               & ! JP add
+        dlwsfci_cpl, dswsfci_cpl, dlwsfc_cpl, dswsfc_cpl, dnirbmi_cpl, dnirdfi_cpl, dvisbmi_cpl,       & 
         dvisdfi_cpl, dnirbm_cpl, dnirdf_cpl, dvisbm_cpl, dvisdf_cpl, nlwsfci_cpl, nlwsfc_cpl, t2mi_cpl, q2mi_cpl, u10mi_cpl,        &
         v10mi_cpl, tsfci_cpl, psurfi_cpl, nnirbmi_cpl, nnirdfi_cpl, nvisbmi_cpl, nvisdfi_cpl, nswsfci_cpl, nswsfc_cpl, nnirbm_cpl,  &
         nnirdf_cpl, nvisbm_cpl, nvisdf_cpl, &
-        soiltyp_cpl, & ! JP add                                                                                                    
+        soiltyp_cpl , vegtype_cpl , sigmaf_cpl  , sfcemis_cpl , dlwflx_cpl  , snet_cpl    , tg3_cpl     , cm_cpl      , ch_cpl      , & ! JP add
+        prsl1_cpl   , prslki_cpl  , zf_cpl      , land_cpl    , slopetyp_cpl, shdmin_cpl  , shdmax_cpl  , snoalb_cpl  , sfalb_cpl   , & ! JP add
+        bexppert_cpl, xlaipert_cpl, vegfpert_cpl,                                                                                     & ! JP add
         gflux, evbsa, evcwa, transa, sbsnoa, snowca, snohfa, ep,                                &
         runoff, srunoff, runof, drain, lheatstrg, z0fac, e0fac, zorl, hflx, evap, hflxq, evapq, hffac, hefac, errmsg, errflg)
 
@@ -234,8 +238,49 @@
           t2m, q2m, u10m, v10m, tsfc, tsfc_wat, pgr, xcosz, evbs, evcw, trans, sbsno, snowc, snohf
         
         ! JP add for export to land
-        integer, dimension(im),  intent(in)  :: soiltyp
-        integer, dimension(im),  intent(inout)  :: soiltyp_cpl
+        integer             , dimension(im),  intent(in)  :: soiltyp
+        integer             , dimension(im),  intent(in)  :: vegtype
+        real(kind=kind_phys), dimension(im),  intent(in)  :: sigmaf
+        real(kind=kind_phys), dimension(im),  intent(in)  :: sfcemis
+        real(kind=kind_phys), dimension(im),  intent(in)  :: dlwflx
+        real(kind=kind_phys), dimension(im),  intent(in)  :: snet
+        real(kind=kind_phys), dimension(im),  intent(in)  :: tg3
+        real(kind=kind_phys), dimension(im),  intent(in)  :: cm
+        real(kind=kind_phys), dimension(im),  intent(in)  :: ch
+        real(kind=kind_phys), dimension(im),  intent(in)  :: prsl1
+        real(kind=kind_phys), dimension(im),  intent(in)  :: prslki
+        real(kind=kind_phys), dimension(im),  intent(in)  :: zf
+        logical             , dimension(im),  intent(in)  :: land
+        integer             , dimension(im),  intent(in)  :: slopetyp
+        real(kind=kind_phys), dimension(im),  intent(in)  :: shdmin
+        real(kind=kind_phys), dimension(im),  intent(in)  :: shdmax
+        real(kind=kind_phys), dimension(im),  intent(in)  :: snoalb
+        real(kind=kind_phys), dimension(im),  intent(in)  :: sfalb
+        real(kind=kind_phys), dimension(im),  intent(in)  :: bexppert
+        real(kind=kind_phys), dimension(im),  intent(in)  :: xlaipert
+        real(kind=kind_phys), dimension(im),  intent(in)  :: vegfpert
+
+        integer             , dimension(im),  intent(out)  :: soiltyp_cpl
+        integer             , dimension(im),  intent(out)  :: vegtype_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: sigmaf_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: sfcemis_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: dlwflx_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: snet_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: tg3_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: cm_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: ch_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: prsl1_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: prslki_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: zf_cpl
+        logical             , dimension(im),  intent(out)  :: land_cpl
+        integer             , dimension(im),  intent(out)  :: slopetyp_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: shdmin_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: shdmax_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: snoalb_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: sfalb_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: bexppert_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: xlaipert_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: vegfpert_cpl
         ! JP end
 
         real(kind=kind_phys), dimension(im),  intent(inout) :: epi, gfluxi, t1, q1, u1, v1, dlwsfci_cpl, dswsfci_cpl, dlwsfc_cpl, &
@@ -315,8 +360,30 @@
 !           tsfci_cpl   (i) = tsfc_wat(i)
             psurfi_cpl  (i) = pgr(i)
 
-            ! JP add, for export to land comp
-            soiltyp_cpl (i) = soiltyp(i)
+            ! ! JP add, for export to land comp
+            soiltyp_cpl   (i) = soiltyp(i)
+            vegtype_cpl   (i) = vegtype(i)
+            sigmaf_cpl    (i) = sigmaf(i)
+            sfcemis_cpl   (i) = sfcemis(i)
+            dlwflx_cpl    (i) = dlwflx(i)
+            !dswsfc_cpl    (i) = dswsfc(i)
+            snet_cpl      (i) = snet(i)
+            tg3_cpl       (i) = tg3(i)
+            cm_cpl        (i) = cm(i)
+            ch_cpl        (i) = ch(i)
+            prsl1_cpl     (i) = prsl1(i)
+            prslki_cpl    (i) = prslki(i)
+            zf_cpl        (i) = zf(i)
+            land_cpl      (i) = land(i)
+            slopetyp_cpl  (i) = slopetyp(i)
+            shdmin_cpl    (i) = shdmin(i)
+            shdmax_cpl    (i) = shdmax(i)
+            snoalb_cpl    (i) = snoalb(i)
+            sfalb_cpl     (i) = sfalb(i)
+            bexppert_cpl  (i) = bexppert(i)
+            xlaipert_cpl  (i) = xlaipert(i)
+            vegfpert_cpl  (i) = vegfpert(i)
+
           enddo
 
 !  ---  estimate mean albedo for ocean point without ice cover and apply
