@@ -11,7 +11,7 @@
       implicit none
 
       public :: sfc_diff_init, sfc_diff_run, sfc_diff_finalize
-      public :: stab_prep_lnd
+      public :: stab_prep_lnd, stability
       
       private
 
