@@ -216,6 +216,8 @@
         soiltyp , vegtype , sigmaf  , sfcemis , dlwflx  , snet    , tg3     , cm      , ch      ,   & ! JP add
         prsl1   , prslki  , zf      , land    , slopetyp, shdmin  , shdmax  , snoalb  , sfalb   ,   & ! JP add
         bexppert, xlaipert, vegfpert,                                                               & ! JP add
+        prsik1, weasd , snwdph, tskin , tprcp , srflag, smc   , stc   , slc   , canopy,             & ! JP add
+        tsurf , z0rl  , z0pert, ztpert, ustar,                                               & ! JP add
         dlwsfci_cpl, dswsfci_cpl, dlwsfc_cpl, dswsfc_cpl, dnirbmi_cpl, dnirdfi_cpl, dvisbmi_cpl,       & 
         dvisdfi_cpl, dnirbm_cpl, dnirdf_cpl, dvisbm_cpl, dvisdf_cpl, nlwsfci_cpl, nlwsfc_cpl, t2mi_cpl, q2mi_cpl, u10mi_cpl,        &
         v10mi_cpl, tsfci_cpl, psurfi_cpl, nnirbmi_cpl, nnirdfi_cpl, nvisbmi_cpl, nvisdfi_cpl, nswsfci_cpl, nswsfc_cpl, nnirbm_cpl,  &
@@ -223,6 +225,8 @@
         soiltyp_cpl , vegtype_cpl , sigmaf_cpl  , sfcemis_cpl , dlwflx_cpl  , snet_cpl    , tg3_cpl     , cm_cpl      , ch_cpl      , & ! JP add
         prsl1_cpl   , prslki_cpl  , zf_cpl      , land_cpl    , slopetyp_cpl, shdmin_cpl  , shdmax_cpl  , snoalb_cpl  , sfalb_cpl   , & ! JP add
         bexppert_cpl, xlaipert_cpl, vegfpert_cpl,                                                                                     & ! JP add
+        prsik1_cpl, weasd_cpl , snwdph_cpl, tskin_cpl , tprcp_cpl , srflag_cpl, smc_cpl   , stc_cpl   , slc_cpl   ,                   & ! JP add
+        canopy_cpl, trans_cpl , tsurf_cpl , z0rl_cpl  , z0pert_cpl, ztpert_cpl, ustar_cpl,                                             & ! JP add
         gflux, evbsa, evcwa, transa, sbsnoa, snowca, snohfa, ep,                                &
         runoff, srunoff, runof, drain, lheatstrg, z0fac, e0fac, zorl, hflx, evap, hflxq, evapq, hffac, hefac, errmsg, errflg)
 
@@ -259,7 +263,22 @@
         real(kind=kind_phys), dimension(im),  intent(in)  :: bexppert
         real(kind=kind_phys), dimension(im),  intent(in)  :: xlaipert
         real(kind=kind_phys), dimension(im),  intent(in)  :: vegfpert
-
+        real(kind=kind_phys), dimension(im),  intent(in)  :: prsik1
+        real(kind=kind_phys), dimension(im),  intent(in)  :: weasd
+        real(kind=kind_phys), dimension(im),  intent(in)  :: snwdph
+        real(kind=kind_phys), dimension(im),  intent(in)  :: tskin
+        real(kind=kind_phys), dimension(im),  intent(in)  :: tprcp
+        real(kind=kind_phys), dimension(im),  intent(in)  :: srflag
+        real(kind=kind_phys), dimension(im),  intent(in)  :: smc
+        real(kind=kind_phys), dimension(im),  intent(in)  :: stc
+        real(kind=kind_phys), dimension(im),  intent(in)  :: slc
+        real(kind=kind_phys), dimension(im),  intent(in)  :: canopy
+        real(kind=kind_phys), dimension(im),  intent(in)  :: tsurf
+        real(kind=kind_phys), dimension(im),  intent(in)  :: z0rl
+        real(kind=kind_phys), dimension(im),  intent(in)  :: z0pert
+        real(kind=kind_phys), dimension(im),  intent(in)  :: ztpert
+        real(kind=kind_phys), dimension(im),  intent(in)  :: ustar
+        
         integer             , dimension(im),  intent(out)  :: soiltyp_cpl
         integer             , dimension(im),  intent(out)  :: vegtype_cpl
         real(kind=kind_phys), dimension(im),  intent(out)  :: sigmaf_cpl
@@ -281,6 +300,23 @@
         real(kind=kind_phys), dimension(im),  intent(out)  :: bexppert_cpl
         real(kind=kind_phys), dimension(im),  intent(out)  :: xlaipert_cpl
         real(kind=kind_phys), dimension(im),  intent(out)  :: vegfpert_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: prsik1_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: weasd_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: snwdph_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: tskin_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: tprcp_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: srflag_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: smc_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: stc_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: slc_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: canopy_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: trans_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: tsurf_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: z0rl_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: z0pert_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: ztpert_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: ustar_cpl
+        
         ! JP end
 
         real(kind=kind_phys), dimension(im),  intent(inout) :: epi, gfluxi, t1, q1, u1, v1, dlwsfci_cpl, dswsfci_cpl, dlwsfc_cpl, &
@@ -383,7 +419,22 @@
             bexppert_cpl  (i) = bexppert(i)
             xlaipert_cpl  (i) = xlaipert(i)
             vegfpert_cpl  (i) = vegfpert(i)
-
+            prsik1_cpl    (i) = prsik1(i)
+            weasd_cpl     (i) = weasd(i)
+            snwdph_cpl    (i) = snwdph(i)
+            tskin_cpl     (i) = tskin(i)
+            tprcp_cpl     (i) = tprcp(i)
+            srflag_cpl    (i) = srflag(i)
+            smc_cpl       (i) = smc(i)
+            stc_cpl       (i) = stc(i)
+            slc_cpl       (i) = slc(i)
+            canopy_cpl    (i) = canopy(i)
+            trans_cpl     (i) = trans(i)
+            tsurf_cpl     (i) = tsurf(i)
+            z0rl_cpl      (i) = z0rl(i)
+            z0pert_cpl    (i) = z0pert(i)
+            ztpert_cpl    (i) = ztpert(i)
+            ustar_cpl     (i) = ustar(i)
           enddo
 
 !  ---  estimate mean albedo for ocean point without ice cover and apply

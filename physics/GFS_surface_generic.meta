@@ -1514,7 +1514,127 @@
   dimensions = (horizontal_loop_extent)
   type = real
   intent = in
-  optional = F  
+  optional = F
+[prsik1]
+  standard_name = dimensionless_exner_function_at_lowest_model_interface
+  long_name =  dimensionless Exner function at the ground surface
+  units = none
+  dimensions = (horizontal_loop_extent)
+  type = real
+  intent = in
+  optional = F
+[weasd]
+  standard_name = water_equivalent_accumulated_snow_depth_over_land
+  long_name =  water equiv of acc snow depth over land
+  units = mm
+  dimensions = (horizontal_loop_extent)
+  type = real
+  intent = in
+  optional = F
+[snwdph]
+  standard_name = surface_snow_thickness_water_equivalent_over_land
+  long_name =  water equivalent snow depth over land
+  units = mm
+  dimensions = (horizontal_loop_extent)
+  type = real
+  intent = in
+  optional = F
+[tskin]
+  standard_name = surface_skin_temperature_over_land_interstitial
+  long_name =  surface skin temperature over land (temporary use as interstitial)
+  units = K
+  dimensions = (horizontal_loop_extent)
+  type = real
+  intent = in
+  optional = F
+[tprcp]
+  standard_name = nonnegative_lwe_thickness_of_precipitation_amount_on_dynamics_timestep_over_land
+  long_name =  total precipitation amount in each time step over land
+  units = m
+  dimensions = (horizontal_loop_extent)
+  type = real
+  intent = in
+  optional = F
+[srflag]
+  standard_name = flag_for_precipitation_type
+  long_name =  flag for snow or rain precipitation
+  units = flag
+  dimensions = (horizontal_loop_extent)
+  type = real
+  intent = in
+  optional = F
+[smc]
+  standard_name = volume_fraction_of_soil_moisture
+  long_name =  volumetric fraction of soil moisture
+  units = frac
+  dimensions = (horizontal_loop_extent,soil_vertical_dimension)
+  type = real
+  intent = in
+  optional = F
+[stc]
+  standard_name = soil_temperature
+  long_name =  soil temperature
+  units = K
+  dimensions = (horizontal_loop_extent,soil_vertical_dimension)
+  type = real
+  intent = in
+  optional = F
+[slc]
+  standard_name = volume_fraction_of_unfrozen_soil_moisture
+  long_name =  volume fraction of unfrozen soil moisture
+  units = frac
+  dimensions = (horizontal_loop_extent,soil_vertical_dimension)
+  type = real
+  intent = in
+  optional = F
+[canopy]
+  standard_name = canopy_water_amount
+  long_name =  canopy moisture content
+  units = kg m-2
+  dimensions = (horizontal_loop_extent)
+  type = real
+  intent = in
+  optional = F
+[tsurf]
+  standard_name = surface_skin_temperature_after_iteration_over_land
+  long_name =  surface skin temperature after iteration over land
+  units = K
+  dimensions = (horizontal_loop_extent)
+  type = real
+  intent = in
+  optional = F
+[z0rl]
+  standard_name = surface_roughness_length_over_land
+  long_name =  surface roughness length over land (temporary use as interstitial)
+  units = cm
+  dimensions = (horizontal_loop_extent)
+  type = real
+  intent = in
+  optional = F
+[z0pert]
+  standard_name = perturbation_of_momentum_roughness_length
+  long_name =  perturbation of momentum roughness length
+  units = frac
+  dimensions = (horizontal_loop_extent)
+  type = real
+  intent = in
+  optional = F
+[ztpert]
+  standard_name = perturbation_of_heat_to_momentum_roughness_length_ratio
+  long_name =  perturbation of heat to momentum roughness length ratio
+  units = frac
+  dimensions = (horizontal_loop_extent)
+  type = real
+  intent = in
+  optional = F
+[ustar]
+  standard_name = surface_friction_velocity_over_land
+  long_name =  surface friction velocity over land
+  units = m s-1
+  dimensions = (horizontal_loop_extent)
+  type = real
+  intent = in
+  optional = F
 [soiltyp_cpl]
   standard_name = soil_type_classification_for_coupling
   long_name = soil type at each grid cell for coupling
@@ -1704,6 +1824,150 @@
   kind = kind_phys
   intent = out
   optional = F  
+[prsik1_cpl]
+  standard_name = dimensionless_exner_function_at_lowest_model_interface_for_coupling
+  long_name = dimensionless Exner function at the ground surface for coupling
+  units = none
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  intent = out
+  optional = F
+[weasd_cpl]
+  standard_name = water_equivalent_accumulated_snow_depth_over_land_for_coupling
+  long_name = water equiv of acc snow depth over land for coupling
+  units = mm
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  intent = out
+  optional = F
+[snwdph_cpl]
+  standard_name = surface_snow_thickness_water_equivalent_over_land_for_coupling
+  long_name = water equivalent snow depth over land for coupling
+  units = mm
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  intent = out
+  optional = F
+[tskin_cpl]
+  standard_name = surface_skin_temperature_over_land_interstitial_for_coupling
+  long_name = surface skin temperature over land (temporary use as interstitial) for coupling
+  units = K
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  intent = out
+  optional = F
+[tprcp_cpl]
+  standard_name = nonnegative_lwe_thickness_of_precipitation_amount_on_dynamics_timestep_over_land_for_coupling
+  long_name = total precipitation amount in each time step over land for coupling
+  units = m
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  intent = out
+  optional = F
+[srflag_cpl]
+  standard_name = flag_for_precipitation_type_for_coupling
+  long_name = flag for snow or rain precipitation for coupling
+  units = flag
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  intent = out
+  optional = F
+[smc_cpl]
+  standard_name = volume_fraction_of_soil_moisture_for_coupling
+  long_name = volumetric fraction of soil moisture for coupling
+  units = frac
+  dimensions = (horizontal_loop_extent,soil_vertical_dimension)
+  type = real
+  kind = kind_phys
+  intent = out
+  optional = F
+[stc_cpl]
+  standard_name = soil_temperature_for_coupling
+  long_name = soil temperature for coupling
+  units = K
+  dimensions = (horizontal_loop_extent,soil_vertical_dimension)
+  type = real
+  kind = kind_phys
+  intent = out
+  optional = F
+[slc_cpl]
+  standard_name = volume_fraction_of_unfrozen_soil_moisture_for_coupling
+  long_name = volume fraction of unfrozen soil moisture for coupling
+  units = frac
+  dimensions = (horizontal_loop_extent,soil_vertical_dimension)
+  type = real
+  kind = kind_phys
+  intent = out
+  optional = F
+[canopy_cpl]
+  standard_name = canopy_water_amount_for_coupling
+  long_name = canopy moisture content for coupling
+  units = kg m-2
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  intent = out
+  optional = F
+[trans_cpl]
+  standard_name = transpiration_flux_for_coupling
+  long_name = total plant transpiration rate for coupling
+  units = W m-2
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  intent = out
+  optional = F
+[tsurf_cpl]
+  standard_name = surface_skin_temperature_after_iteration_over_land_for_coupling
+  long_name = surface skin temperature after iteration over land for coupling
+  units = K
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  intent = out
+  optional = F
+[z0rl_cpl]
+  standard_name = surface_roughness_length_over_land_for_coupling
+  long_name = surface roughness length over land (temporary use as interstitial) for coupling
+  units = cm
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  intent = out
+  optional = F
+[z0pert_cpl]
+  standard_name = perturbation_of_momentum_roughness_length_for_coupling
+  long_name = perturbation of momentum roughness length for coupling
+  units = frac
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  intent = out
+  optional = F
+[ztpert_cpl]
+  standard_name = perturbation_of_heat_to_momentum_roughness_length_ratio_for_coupling
+  long_name = perturbation of heat to momentum roughness length ratio for coupling
+  units = frac
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  intent = out
+  optional = F
+[ustar_cpl]
+  standard_name = surface_friction_velocity_over_land_for_coupling
+  long_name = surface friction velocity over land for coupling
+  units = m s-1
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  intent = out
+  optional = F
 [errmsg]
   standard_name = ccpp_error_message
   long_name = error message for error handling in CCPP
