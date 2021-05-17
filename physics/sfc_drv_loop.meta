@@ -529,7 +529,7 @@
   intent = inout
   optional = F
 [z0rl]
-  standard_name = surface_roughness_length_over_land_interstitial
+  standard_name = surface_roughness_length_over_land
   long_name = surface roughness length over land  (temporary use as interstitial)
   units = cm
   dimensions = (horizontal_dimension)

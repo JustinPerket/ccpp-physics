@@ -25,13 +25,23 @@
 !! \htmlinclude GFS_surface_generic_pre_run.html
 !!
       subroutine GFS_surface_generic_pre_run (im, levs, vfrac, islmsk, isot, ivegsrc, stype, vtype, slope, &
-                          prsik_1, prslk_1, tsfc, phil, con_g,                                             &
-                          sigmaf, soiltyp, vegtype, slopetyp, work3, tsurf, zlvl,                          &
-                          drain_cpl, dsnow_cpl, rain_cpl, snow_cpl, lndp_type, n_var_lndp, sfc_wts,        &
-                          lndp_var_list, lndp_prt_list,                                                    &
-                          z01d, zt1d, bexp1d, xlai1d, vegf1d, lndp_vgf, sfc_wts_inv,                       &
-                          cplflx, flag_cice, islmsk_cice, slimskin_cpl, tisfc, tsfco, fice, hice,          &
-                          wind, u1, v1, cnvwind, smcwlt2, smcref2, errmsg, errflg)
+           prsik_1, prslk_1, tsfc, phil, con_g,                                             &
+           sigmaf, soiltyp, vegtype, slopetyp, work3, tsurf, zlvl,                          &
+           drain_cpl, dsnow_cpl, rain_cpl, snow_cpl, lndp_type, n_var_lndp, sfc_wts,        &
+           lndp_var_list, lndp_prt_list,                                                    &
+           sfcemis , dlwflx  , snet    , tg3     , cm      , ch      ,   & ! JP add
+           prsl1   , land    , shdmin  , shdmax  , snoalb  , sfalb   ,   & ! JP add
+           weasd , snwdph, tskin , tprcp , srflag, smc   , stc   , slc   , canopy, trans   ,& ! JP add
+           z0rl  , ustar,                                                      & ! JP add                         
+           z01d, zt1d, bexp1d, xlai1d, vegf1d, lndp_vgf, sfc_wts_inv,                       &
+           cplflx, flag_cice, islmsk_cice, slimskin_cpl, tisfc, tsfco, fice, hice,          &
+           wind, u1, v1, cnvwind, smcwlt2, smcref2,                                         &
+           soiltyp_cpl , vegtype_cpl , sigmaf_cpl  , sfcemis_cpl , dlwflx_cpl  , snet_cpl    , tg3_cpl     , cm_cpl      , ch_cpl      , & ! JP add
+           prsl1_cpl   , prslki_cpl  , zf_cpl      , land_cpl    , slopetyp_cpl, shdmin_cpl  , shdmax_cpl  , snoalb_cpl  , sfalb_cpl   , & ! JP add
+           bexppert_cpl, xlaipert_cpl, vegfpert_cpl,                                                                                     & ! JP add
+           prsik1_cpl, weasd_cpl , snwdph_cpl, tskin_cpl , tprcp_cpl , srflag_cpl, smc_cpl   , stc_cpl   , slc_cpl   ,                   & ! JP add
+           canopy_cpl, trans_cpl , tsurf_cpl , z0rl_cpl  , z0pert_cpl, ztpert_cpl, ustar_cpl,                                & ! JP add
+           errmsg, errflg)
 
         use surface_perturbation,  only: cdfnor
 
@@ -82,6 +92,85 @@
         !
         real(kind=kind_phys), dimension(im), intent(out) :: smcwlt2, smcref2
 
+        ! JP add for export to land
+        !integer             , dimension(im),  intent(in)  :: soiltyp
+        !integer             , dimension(im),  intent(in)  :: vegtype
+        !real(kind=kind_phys), dimension(im),  intent(in)  :: sigmaf
+        real(kind=kind_phys), dimension(im),  intent(in)  :: sfcemis
+        real(kind=kind_phys), dimension(im),  intent(in)  :: dlwflx
+        real(kind=kind_phys), dimension(im),  intent(in)  :: snet
+        real(kind=kind_phys), dimension(im),  intent(in)  :: tg3
+        real(kind=kind_phys), dimension(im),  intent(in)  :: cm
+        real(kind=kind_phys), dimension(im),  intent(in)  :: ch
+        real(kind=kind_phys), dimension(im),  intent(in)  :: prsl1
+        !real(kind=kind_phys), dimension(im),  intent(in)  :: prslki
+        !real(kind=kind_phys), dimension(im),  intent(in)  :: zf
+        logical             , dimension(im),  intent(in)  :: land
+        !integer             , dimension(im),  intent(in)  :: slopetyp
+        real(kind=kind_phys), dimension(im),  intent(in)  :: shdmin
+        real(kind=kind_phys), dimension(im),  intent(in)  :: shdmax
+        real(kind=kind_phys), dimension(im),  intent(in)  :: snoalb
+        real(kind=kind_phys), dimension(im),  intent(in)  :: sfalb
+        !real(kind=kind_phys), dimension(im),  intent(in)  :: bexppert
+        !real(kind=kind_phys), dimension(im),  intent(in)  :: xlaipert
+        !real(kind=kind_phys), dimension(im),  intent(in)  :: vegfpert
+        !real(kind=kind_phys), dimension(im),  intent(in)  :: prsik1
+        real(kind=kind_phys), dimension(im),  intent(in)  :: weasd
+        real(kind=kind_phys), dimension(im),  intent(in)  :: snwdph
+        real(kind=kind_phys), dimension(im),  intent(in)  :: tskin
+        real(kind=kind_phys), dimension(im),  intent(in)  :: tprcp
+        real(kind=kind_phys), dimension(im),  intent(in)  :: srflag
+        real(kind=kind_phys), dimension(im),  intent(in)  :: smc
+        real(kind=kind_phys), dimension(im),  intent(in)  :: stc
+        real(kind=kind_phys), dimension(im),  intent(in)  :: slc
+        real(kind=kind_phys), dimension(im),  intent(in)  :: canopy
+        real(kind=kind_phys), dimension(im),  intent(in)  :: trans
+        !real(kind=kind_phys), dimension(im),  intent(in)  :: tsurf
+        real(kind=kind_phys), dimension(im),  intent(in)  :: z0rl
+        !real(kind=kind_phys), dimension(im),  intent(in)  :: z0pert
+        !real(kind=kind_phys), dimension(im),  intent(in)  :: ztpert
+        real(kind=kind_phys), dimension(im),  intent(in)  :: ustar
+        
+        integer             , dimension(im),  intent(out)  :: soiltyp_cpl
+        integer             , dimension(im),  intent(out)  :: vegtype_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: sigmaf_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: sfcemis_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: dlwflx_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: snet_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: tg3_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: cm_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: ch_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: prsl1_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: prslki_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: zf_cpl
+        logical             , dimension(im),  intent(out)  :: land_cpl
+        integer             , dimension(im),  intent(out)  :: slopetyp_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: shdmin_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: shdmax_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: snoalb_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: sfalb_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: bexppert_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: xlaipert_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: vegfpert_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: prsik1_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: weasd_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: snwdph_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: tskin_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: tprcp_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: srflag_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: smc_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: stc_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: slc_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: canopy_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: trans_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: tsurf_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: z0rl_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: z0pert_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: ztpert_cpl
+        real(kind=kind_phys), dimension(im),  intent(out)  :: ustar_cpl
+        
+        ! JP end
+        
         ! CCPP error handling
         character(len=*), intent(out) :: errmsg
         integer,          intent(out) :: errflg
@@ -178,6 +267,47 @@
         do i=1,im
           islmsk_cice(i) = nint(slimskin_cpl(i))
           flag_cice(i)   = (islmsk_cice(i) == 4)
+
+          ! ! JP add, for export to land comp
+          soiltyp_cpl   (i) = soiltyp(i)
+          vegtype_cpl   (i) = vegtype(i)
+          sigmaf_cpl    (i) = sigmaf(i)
+          sfcemis_cpl   (i) = sfcemis(i)
+          dlwflx_cpl    (i) = dlwflx(i)
+          !dswsfc_cpl    (i) = dswsfc(i)
+          snet_cpl      (i) = snet(i)
+          tg3_cpl       (i) = tg3(i)
+          cm_cpl        (i) = cm(i)
+          ch_cpl        (i) = ch(i)
+          prsl1_cpl     (i) = prsl1(i)
+          prslki_cpl    (i) = work3(i)
+          zf_cpl        (i) = zlvl(i)
+          land_cpl      (i) = land(i)
+          slopetyp_cpl  (i) = slopetyp(i)
+          shdmin_cpl    (i) = shdmin(i)
+          shdmax_cpl    (i) = shdmax(i)
+          snoalb_cpl    (i) = snoalb(i)
+          sfalb_cpl     (i) = sfalb(i)
+          bexppert_cpl  (i) = bexp1d(i)
+          xlaipert_cpl  (i) = xlai1d(i)
+          vegfpert_cpl  (i) = vegf1d(i)
+          prsik1_cpl    (i) = prsik_1(i)
+          weasd_cpl     (i) = weasd(i)
+          snwdph_cpl    (i) = snwdph(i)
+          tskin_cpl     (i) = tskin(i)
+          tprcp_cpl     (i) = tprcp(i)
+          srflag_cpl    (i) = srflag(i)
+          smc_cpl       (i) = smc(i)
+          stc_cpl       (i) = stc(i)
+          slc_cpl       (i) = slc(i)
+          canopy_cpl    (i) = canopy(i)
+          trans_cpl     (i) = trans(i)
+          tsurf_cpl     (i) = tsurf(i)
+          z0rl_cpl      (i) = z0rl(i)
+          z0pert_cpl    (i) = z01d(i)
+          ztpert_cpl    (i) = zt1d(i)
+          ustar_cpl     (i) = ustar(i)
+          
         enddo
       endif
 
@@ -213,20 +343,20 @@
         adjsfcdlw, adjsfcdsw, adjnirbmd, adjnirdfd, adjvisbmd, adjvisdfd, adjsfculw, adjsfculw_wat, adjnirbmu, adjnirdfu,           &
         adjvisbmu, adjvisdfu,t2m, q2m, u10m, v10m, tsfc, tsfc_wat, pgr, xcosz, evbs, evcw, trans, sbsno, snowc, snohf,              &
         epi, gfluxi, t1, q1, u1, v1, &
-        soiltyp , vegtype , sigmaf  , sfcemis , dlwflx  , snet    , tg3     , cm      , ch      ,   & ! JP add
-        prsl1   , prslki  , zf      , land    , slopetyp, shdmin  , shdmax  , snoalb  , sfalb   ,   & ! JP add
-        bexppert, xlaipert, vegfpert,                                                               & ! JP add
-        prsik1, weasd , snwdph, tskin , tprcp , srflag, smc   , stc   , slc   , canopy,             & ! JP add
-        tsurf , z0rl  , z0pert, ztpert, ustar,                                               & ! JP add
+        ! soiltyp , vegtype , sigmaf  , sfcemis , dlwflx  , snet    , tg3     , cm      , ch      ,   & ! JP add
+        ! prsl1   , prslki  , zf      , land    , slopetyp, shdmin  , shdmax  , snoalb  , sfalb   ,   & ! JP add
+        ! bexppert, xlaipert, vegfpert,                                                               & ! JP add
+        ! prsik1, weasd , snwdph, tskin , tprcp , srflag, smc   , stc   , slc   , canopy,             & ! JP add
+        ! tsurf , z0rl  , z0pert, ztpert, ustar,                                               & ! JP add
         dlwsfci_cpl, dswsfci_cpl, dlwsfc_cpl, dswsfc_cpl, dnirbmi_cpl, dnirdfi_cpl, dvisbmi_cpl,       & 
         dvisdfi_cpl, dnirbm_cpl, dnirdf_cpl, dvisbm_cpl, dvisdf_cpl, nlwsfci_cpl, nlwsfc_cpl, t2mi_cpl, q2mi_cpl, u10mi_cpl,        &
         v10mi_cpl, tsfci_cpl, psurfi_cpl, nnirbmi_cpl, nnirdfi_cpl, nvisbmi_cpl, nvisdfi_cpl, nswsfci_cpl, nswsfc_cpl, nnirbm_cpl,  &
         nnirdf_cpl, nvisbm_cpl, nvisdf_cpl, &
-        soiltyp_cpl , vegtype_cpl , sigmaf_cpl  , sfcemis_cpl , dlwflx_cpl  , snet_cpl    , tg3_cpl     , cm_cpl      , ch_cpl      , & ! JP add
-        prsl1_cpl   , prslki_cpl  , zf_cpl      , land_cpl    , slopetyp_cpl, shdmin_cpl  , shdmax_cpl  , snoalb_cpl  , sfalb_cpl   , & ! JP add
-        bexppert_cpl, xlaipert_cpl, vegfpert_cpl,                                                                                     & ! JP add
-        prsik1_cpl, weasd_cpl , snwdph_cpl, tskin_cpl , tprcp_cpl , srflag_cpl, smc_cpl   , stc_cpl   , slc_cpl   ,                   & ! JP add
-        canopy_cpl, trans_cpl , tsurf_cpl , z0rl_cpl  , z0pert_cpl, ztpert_cpl, ustar_cpl,                                             & ! JP add
+        ! soiltyp_cpl , vegtype_cpl , sigmaf_cpl  , sfcemis_cpl , dlwflx_cpl  , snet_cpl    , tg3_cpl     , cm_cpl      , ch_cpl      , & ! JP add
+        ! prsl1_cpl   , prslki_cpl  , zf_cpl      , land_cpl    , slopetyp_cpl, shdmin_cpl  , shdmax_cpl  , snoalb_cpl  , sfalb_cpl   , & ! JP add
+        ! bexppert_cpl, xlaipert_cpl, vegfpert_cpl,                                                                                     & ! JP add
+        ! prsik1_cpl, weasd_cpl , snwdph_cpl, tskin_cpl , tprcp_cpl , srflag_cpl, smc_cpl   , stc_cpl   , slc_cpl   ,                   & ! JP add
+        ! canopy_cpl, trans_cpl , tsurf_cpl , z0rl_cpl  , z0pert_cpl, ztpert_cpl, ustar_cpl,                                             & ! JP add
         gflux, evbsa, evcwa, transa, sbsnoa, snowca, snohfa, ep,                                &
         runoff, srunoff, runof, drain, lheatstrg, z0fac, e0fac, zorl, hflx, evap, hflxq, evapq, hffac, hefac, errmsg, errflg)
 
@@ -241,83 +371,83 @@
           adjnirbmd, adjnirdfd, adjvisbmd, adjvisdfd, adjsfculw, adjsfculw_wat, adjnirbmu, adjnirdfu, adjvisbmu, adjvisdfu,    &
           t2m, q2m, u10m, v10m, tsfc, tsfc_wat, pgr, xcosz, evbs, evcw, trans, sbsno, snowc, snohf
         
-        ! JP add for export to land
-        integer             , dimension(im),  intent(in)  :: soiltyp
-        integer             , dimension(im),  intent(in)  :: vegtype
-        real(kind=kind_phys), dimension(im),  intent(in)  :: sigmaf
-        real(kind=kind_phys), dimension(im),  intent(in)  :: sfcemis
-        real(kind=kind_phys), dimension(im),  intent(in)  :: dlwflx
-        real(kind=kind_phys), dimension(im),  intent(in)  :: snet
-        real(kind=kind_phys), dimension(im),  intent(in)  :: tg3
-        real(kind=kind_phys), dimension(im),  intent(in)  :: cm
-        real(kind=kind_phys), dimension(im),  intent(in)  :: ch
-        real(kind=kind_phys), dimension(im),  intent(in)  :: prsl1
-        real(kind=kind_phys), dimension(im),  intent(in)  :: prslki
-        real(kind=kind_phys), dimension(im),  intent(in)  :: zf
-        logical             , dimension(im),  intent(in)  :: land
-        integer             , dimension(im),  intent(in)  :: slopetyp
-        real(kind=kind_phys), dimension(im),  intent(in)  :: shdmin
-        real(kind=kind_phys), dimension(im),  intent(in)  :: shdmax
-        real(kind=kind_phys), dimension(im),  intent(in)  :: snoalb
-        real(kind=kind_phys), dimension(im),  intent(in)  :: sfalb
-        real(kind=kind_phys), dimension(im),  intent(in)  :: bexppert
-        real(kind=kind_phys), dimension(im),  intent(in)  :: xlaipert
-        real(kind=kind_phys), dimension(im),  intent(in)  :: vegfpert
-        real(kind=kind_phys), dimension(im),  intent(in)  :: prsik1
-        real(kind=kind_phys), dimension(im),  intent(in)  :: weasd
-        real(kind=kind_phys), dimension(im),  intent(in)  :: snwdph
-        real(kind=kind_phys), dimension(im),  intent(in)  :: tskin
-        real(kind=kind_phys), dimension(im),  intent(in)  :: tprcp
-        real(kind=kind_phys), dimension(im),  intent(in)  :: srflag
-        real(kind=kind_phys), dimension(im),  intent(in)  :: smc
-        real(kind=kind_phys), dimension(im),  intent(in)  :: stc
-        real(kind=kind_phys), dimension(im),  intent(in)  :: slc
-        real(kind=kind_phys), dimension(im),  intent(in)  :: canopy
-        real(kind=kind_phys), dimension(im),  intent(in)  :: tsurf
-        real(kind=kind_phys), dimension(im),  intent(in)  :: z0rl
-        real(kind=kind_phys), dimension(im),  intent(in)  :: z0pert
-        real(kind=kind_phys), dimension(im),  intent(in)  :: ztpert
-        real(kind=kind_phys), dimension(im),  intent(in)  :: ustar
+        ! ! JP add for export to land
+        ! integer             , dimension(im),  intent(in)  :: soiltyp
+        ! integer             , dimension(im),  intent(in)  :: vegtype
+        ! real(kind=kind_phys), dimension(im),  intent(in)  :: sigmaf
+        ! real(kind=kind_phys), dimension(im),  intent(in)  :: sfcemis
+        ! real(kind=kind_phys), dimension(im),  intent(in)  :: dlwflx
+        ! real(kind=kind_phys), dimension(im),  intent(in)  :: snet
+        ! real(kind=kind_phys), dimension(im),  intent(in)  :: tg3
+        ! real(kind=kind_phys), dimension(im),  intent(in)  :: cm
+        ! real(kind=kind_phys), dimension(im),  intent(in)  :: ch
+        ! real(kind=kind_phys), dimension(im),  intent(in)  :: prsl1
+        ! real(kind=kind_phys), dimension(im),  intent(in)  :: prslki
+        ! real(kind=kind_phys), dimension(im),  intent(in)  :: zf
+        ! logical             , dimension(im),  intent(in)  :: land
+        ! integer             , dimension(im),  intent(in)  :: slopetyp
+        ! real(kind=kind_phys), dimension(im),  intent(in)  :: shdmin
+        ! real(kind=kind_phys), dimension(im),  intent(in)  :: shdmax
+        ! real(kind=kind_phys), dimension(im),  intent(in)  :: snoalb
+        ! real(kind=kind_phys), dimension(im),  intent(in)  :: sfalb
+        ! real(kind=kind_phys), dimension(im),  intent(in)  :: bexppert
+        ! real(kind=kind_phys), dimension(im),  intent(in)  :: xlaipert
+        ! real(kind=kind_phys), dimension(im),  intent(in)  :: vegfpert
+        ! real(kind=kind_phys), dimension(im),  intent(in)  :: prsik1
+        ! real(kind=kind_phys), dimension(im),  intent(in)  :: weasd
+        ! real(kind=kind_phys), dimension(im),  intent(in)  :: snwdph
+        ! real(kind=kind_phys), dimension(im),  intent(in)  :: tskin
+        ! real(kind=kind_phys), dimension(im),  intent(in)  :: tprcp
+        ! real(kind=kind_phys), dimension(im),  intent(in)  :: srflag
+        ! real(kind=kind_phys), dimension(im),  intent(in)  :: smc
+        ! real(kind=kind_phys), dimension(im),  intent(in)  :: stc
+        ! real(kind=kind_phys), dimension(im),  intent(in)  :: slc
+        ! real(kind=kind_phys), dimension(im),  intent(in)  :: canopy
+        ! real(kind=kind_phys), dimension(im),  intent(in)  :: tsurf
+        ! real(kind=kind_phys), dimension(im),  intent(in)  :: z0rl
+        ! real(kind=kind_phys), dimension(im),  intent(in)  :: z0pert
+        ! real(kind=kind_phys), dimension(im),  intent(in)  :: ztpert
+        ! real(kind=kind_phys), dimension(im),  intent(in)  :: ustar
         
-        integer             , dimension(im),  intent(out)  :: soiltyp_cpl
-        integer             , dimension(im),  intent(out)  :: vegtype_cpl
-        real(kind=kind_phys), dimension(im),  intent(out)  :: sigmaf_cpl
-        real(kind=kind_phys), dimension(im),  intent(out)  :: sfcemis_cpl
-        real(kind=kind_phys), dimension(im),  intent(out)  :: dlwflx_cpl
-        real(kind=kind_phys), dimension(im),  intent(out)  :: snet_cpl
-        real(kind=kind_phys), dimension(im),  intent(out)  :: tg3_cpl
-        real(kind=kind_phys), dimension(im),  intent(out)  :: cm_cpl
-        real(kind=kind_phys), dimension(im),  intent(out)  :: ch_cpl
-        real(kind=kind_phys), dimension(im),  intent(out)  :: prsl1_cpl
-        real(kind=kind_phys), dimension(im),  intent(out)  :: prslki_cpl
-        real(kind=kind_phys), dimension(im),  intent(out)  :: zf_cpl
-        logical             , dimension(im),  intent(out)  :: land_cpl
-        integer             , dimension(im),  intent(out)  :: slopetyp_cpl
-        real(kind=kind_phys), dimension(im),  intent(out)  :: shdmin_cpl
-        real(kind=kind_phys), dimension(im),  intent(out)  :: shdmax_cpl
-        real(kind=kind_phys), dimension(im),  intent(out)  :: snoalb_cpl
-        real(kind=kind_phys), dimension(im),  intent(out)  :: sfalb_cpl
-        real(kind=kind_phys), dimension(im),  intent(out)  :: bexppert_cpl
-        real(kind=kind_phys), dimension(im),  intent(out)  :: xlaipert_cpl
-        real(kind=kind_phys), dimension(im),  intent(out)  :: vegfpert_cpl
-        real(kind=kind_phys), dimension(im),  intent(out)  :: prsik1_cpl
-        real(kind=kind_phys), dimension(im),  intent(out)  :: weasd_cpl
-        real(kind=kind_phys), dimension(im),  intent(out)  :: snwdph_cpl
-        real(kind=kind_phys), dimension(im),  intent(out)  :: tskin_cpl
-        real(kind=kind_phys), dimension(im),  intent(out)  :: tprcp_cpl
-        real(kind=kind_phys), dimension(im),  intent(out)  :: srflag_cpl
-        real(kind=kind_phys), dimension(im),  intent(out)  :: smc_cpl
-        real(kind=kind_phys), dimension(im),  intent(out)  :: stc_cpl
-        real(kind=kind_phys), dimension(im),  intent(out)  :: slc_cpl
-        real(kind=kind_phys), dimension(im),  intent(out)  :: canopy_cpl
-        real(kind=kind_phys), dimension(im),  intent(out)  :: trans_cpl
-        real(kind=kind_phys), dimension(im),  intent(out)  :: tsurf_cpl
-        real(kind=kind_phys), dimension(im),  intent(out)  :: z0rl_cpl
-        real(kind=kind_phys), dimension(im),  intent(out)  :: z0pert_cpl
-        real(kind=kind_phys), dimension(im),  intent(out)  :: ztpert_cpl
-        real(kind=kind_phys), dimension(im),  intent(out)  :: ustar_cpl
+        ! integer             , dimension(im),  intent(out)  :: soiltyp_cpl
+        ! integer             , dimension(im),  intent(out)  :: vegtype_cpl
+        ! real(kind=kind_phys), dimension(im),  intent(out)  :: sigmaf_cpl
+        ! real(kind=kind_phys), dimension(im),  intent(out)  :: sfcemis_cpl
+        ! real(kind=kind_phys), dimension(im),  intent(out)  :: dlwflx_cpl
+        ! real(kind=kind_phys), dimension(im),  intent(out)  :: snet_cpl
+        ! real(kind=kind_phys), dimension(im),  intent(out)  :: tg3_cpl
+        ! real(kind=kind_phys), dimension(im),  intent(out)  :: cm_cpl
+        ! real(kind=kind_phys), dimension(im),  intent(out)  :: ch_cpl
+        ! real(kind=kind_phys), dimension(im),  intent(out)  :: prsl1_cpl
+        ! real(kind=kind_phys), dimension(im),  intent(out)  :: prslki_cpl
+        ! real(kind=kind_phys), dimension(im),  intent(out)  :: zf_cpl
+        ! logical             , dimension(im),  intent(out)  :: land_cpl
+        ! integer             , dimension(im),  intent(out)  :: slopetyp_cpl
+        ! real(kind=kind_phys), dimension(im),  intent(out)  :: shdmin_cpl
+        ! real(kind=kind_phys), dimension(im),  intent(out)  :: shdmax_cpl
+        ! real(kind=kind_phys), dimension(im),  intent(out)  :: snoalb_cpl
+        ! real(kind=kind_phys), dimension(im),  intent(out)  :: sfalb_cpl
+        ! real(kind=kind_phys), dimension(im),  intent(out)  :: bexppert_cpl
+        ! real(kind=kind_phys), dimension(im),  intent(out)  :: xlaipert_cpl
+        ! real(kind=kind_phys), dimension(im),  intent(out)  :: vegfpert_cpl
+        ! real(kind=kind_phys), dimension(im),  intent(out)  :: prsik1_cpl
+        ! real(kind=kind_phys), dimension(im),  intent(out)  :: weasd_cpl
+        ! real(kind=kind_phys), dimension(im),  intent(out)  :: snwdph_cpl
+        ! real(kind=kind_phys), dimension(im),  intent(out)  :: tskin_cpl
+        ! real(kind=kind_phys), dimension(im),  intent(out)  :: tprcp_cpl
+        ! real(kind=kind_phys), dimension(im),  intent(out)  :: srflag_cpl
+        ! real(kind=kind_phys), dimension(im),  intent(out)  :: smc_cpl
+        ! real(kind=kind_phys), dimension(im),  intent(out)  :: stc_cpl
+        ! real(kind=kind_phys), dimension(im),  intent(out)  :: slc_cpl
+        ! real(kind=kind_phys), dimension(im),  intent(out)  :: canopy_cpl
+        ! real(kind=kind_phys), dimension(im),  intent(out)  :: trans_cpl
+        ! real(kind=kind_phys), dimension(im),  intent(out)  :: tsurf_cpl
+        ! real(kind=kind_phys), dimension(im),  intent(out)  :: z0rl_cpl
+        ! real(kind=kind_phys), dimension(im),  intent(out)  :: z0pert_cpl
+        ! real(kind=kind_phys), dimension(im),  intent(out)  :: ztpert_cpl
+        ! real(kind=kind_phys), dimension(im),  intent(out)  :: ustar_cpl
         
-        ! JP end
+        ! ! JP end
 
         real(kind=kind_phys), dimension(im),  intent(inout) :: epi, gfluxi, t1, q1, u1, v1, dlwsfci_cpl, dswsfci_cpl, dlwsfc_cpl, &
           dswsfc_cpl, dnirbmi_cpl, dnirdfi_cpl, dvisbmi_cpl, dvisdfi_cpl, dnirbm_cpl, dnirdf_cpl, dvisbm_cpl, dvisdf_cpl, &
@@ -396,45 +526,45 @@
 !           tsfci_cpl   (i) = tsfc_wat(i)
             psurfi_cpl  (i) = pgr(i)
 
-            ! ! JP add, for export to land comp
-            soiltyp_cpl   (i) = soiltyp(i)
-            vegtype_cpl   (i) = vegtype(i)
-            sigmaf_cpl    (i) = sigmaf(i)
-            sfcemis_cpl   (i) = sfcemis(i)
-            dlwflx_cpl    (i) = dlwflx(i)
-            !dswsfc_cpl    (i) = dswsfc(i)
-            snet_cpl      (i) = snet(i)
-            tg3_cpl       (i) = tg3(i)
-            cm_cpl        (i) = cm(i)
-            ch_cpl        (i) = ch(i)
-            prsl1_cpl     (i) = prsl1(i)
-            prslki_cpl    (i) = prslki(i)
-            zf_cpl        (i) = zf(i)
-            land_cpl      (i) = land(i)
-            slopetyp_cpl  (i) = slopetyp(i)
-            shdmin_cpl    (i) = shdmin(i)
-            shdmax_cpl    (i) = shdmax(i)
-            snoalb_cpl    (i) = snoalb(i)
-            sfalb_cpl     (i) = sfalb(i)
-            bexppert_cpl  (i) = bexppert(i)
-            xlaipert_cpl  (i) = xlaipert(i)
-            vegfpert_cpl  (i) = vegfpert(i)
-            prsik1_cpl    (i) = prsik1(i)
-            weasd_cpl     (i) = weasd(i)
-            snwdph_cpl    (i) = snwdph(i)
-            tskin_cpl     (i) = tskin(i)
-            tprcp_cpl     (i) = tprcp(i)
-            srflag_cpl    (i) = srflag(i)
-            smc_cpl       (i) = smc(i)
-            stc_cpl       (i) = stc(i)
-            slc_cpl       (i) = slc(i)
-            canopy_cpl    (i) = canopy(i)
-            trans_cpl     (i) = trans(i)
-            tsurf_cpl     (i) = tsurf(i)
-            z0rl_cpl      (i) = z0rl(i)
-            z0pert_cpl    (i) = z0pert(i)
-            ztpert_cpl    (i) = ztpert(i)
-            ustar_cpl     (i) = ustar(i)
+            ! ! ! JP add, for export to land comp
+            ! soiltyp_cpl   (i) = soiltyp(i)
+            ! vegtype_cpl   (i) = vegtype(i)
+            ! sigmaf_cpl    (i) = sigmaf(i)
+            ! sfcemis_cpl   (i) = sfcemis(i)
+            ! dlwflx_cpl    (i) = dlwflx(i)
+            ! !dswsfc_cpl    (i) = dswsfc(i)
+            ! snet_cpl      (i) = snet(i)
+            ! tg3_cpl       (i) = tg3(i)
+            ! cm_cpl        (i) = cm(i)
+            ! ch_cpl        (i) = ch(i)
+            ! prsl1_cpl     (i) = prsl1(i)
+            ! prslki_cpl    (i) = prslki(i)
+            ! zf_cpl        (i) = zf(i)
+            ! land_cpl      (i) = land(i)
+            ! slopetyp_cpl  (i) = slopetyp(i)
+            ! shdmin_cpl    (i) = shdmin(i)
+            ! shdmax_cpl    (i) = shdmax(i)
+            ! snoalb_cpl    (i) = snoalb(i)
+            ! sfalb_cpl     (i) = sfalb(i)
+            ! bexppert_cpl  (i) = bexppert(i)
+            ! xlaipert_cpl  (i) = xlaipert(i)
+            ! vegfpert_cpl  (i) = vegfpert(i)
+            ! prsik1_cpl    (i) = prsik1(i)
+            ! weasd_cpl     (i) = weasd(i)
+            ! snwdph_cpl    (i) = snwdph(i)
+            ! tskin_cpl     (i) = tskin(i)
+            ! tprcp_cpl     (i) = tprcp(i)
+            ! srflag_cpl    (i) = srflag(i)
+            ! smc_cpl       (i) = smc(i)
+            ! stc_cpl       (i) = stc(i)
+            ! slc_cpl       (i) = slc(i)
+            ! canopy_cpl    (i) = canopy(i)
+            ! trans_cpl     (i) = trans(i)
+            ! tsurf_cpl     (i) = tsurf(i)
+            ! z0rl_cpl      (i) = z0rl(i)
+            ! z0pert_cpl    (i) = z0pert(i)
+            ! ztpert_cpl    (i) = ztpert(i)
+            ! ustar_cpl     (i) = ustar(i)
           enddo
 
 !  ---  estimate mean albedo for ocean point without ice cover and apply
