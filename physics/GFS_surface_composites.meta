@@ -615,6 +615,69 @@
   kind = kind_phys
   intent = inout
   optional = F
+[tsurf_cpl]
+  standard_name = surface_skin_temperature_after_iteration_over_land_for_coupling
+  long_name = surface skin temperature after iteration over land for coupling
+  units = K
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  intent = out
+  optional = F
+[snwdph_cpl]
+  standard_name = surface_snow_thickness_water_equivalent_over_land_for_coupling
+  long_name = water equivalent snow depth over land for coupling
+  units = mm
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  intent = out
+  optional = F
+[sfcemis_cpl]
+  standard_name = surface_longwave_emissivity_over_land_interstitial_for_coupling
+  long_name = surface lw emissivity in fraction over land (temporary use as interstitial) for coupling
+  units = frac
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  intent = out
+  optional = F
+[z0rl_cpl]
+  standard_name = surface_roughness_length_over_land_for_coupling
+  long_name = surface roughness length over land (temporary use as interstitial) for coupling
+  units = cm
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  intent = out
+  optional = F
+[weasd_cpl]
+  standard_name = water_equivalent_accumulated_snow_depth_over_land_for_coupling
+  long_name = water equiv of acc snow depth over land for coupling
+  units = mm
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  intent = out
+  optional = F
+[tprcp_cpl]
+  standard_name = nonnegative_lwe_thickness_of_precipitation_amount_on_dynamics_timestep_over_land_for_coupling
+  long_name = total precipitation amount in each time step over land for coupling
+  units = m
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  intent = out
+  optional = F  
+[land_cpl]
+  standard_name = flag_nonzero_land_surface_fraction_for_coupling
+  long_name = flag indicating presence of some land surface area fraction for coupling
+  units = flag
+  dimensions = (horizontal_loop_extent)
+  type = logical
+  kind = kind_phys
+  intent = out
+  optional = F
 [errmsg]
   standard_name = ccpp_error_message
   long_name = error message for error handling in CCPP
@@ -764,6 +827,15 @@
   type = real
   kind = kind_phys
   intent = in
+  optional = F
+[dlwflx_cpl]
+  standard_name = surface_downwelling_longwave_flux_absorbed_by_ground_over_land_for_coupling
+  long_name = total sky surface downward longwave flux absorbed by the ground over land for coupling
+  units = W m-2
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  intent = out
   optional = F
 [errmsg]
   standard_name = ccpp_error_message

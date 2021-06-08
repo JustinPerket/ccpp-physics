@@ -566,8 +566,8 @@
   intent = in
   optional = F
 [tskin]
-  standard_name = surface_skin_temperature_over_land_interstitial
-  long_name =  surface skin temperature over land (temporary use as interstitial)
+  standard_name = surface_skin_temperature_over_land
+  long_name =  surface skin temperature over land
   units = K
   dimensions = (horizontal_loop_extent)
   type = real
@@ -646,6 +646,33 @@
   type = real
   intent = in
   optional = F
+[pgr]
+  standard_name = surface_air_pressure
+  long_name = surface pressure
+  units = Pa
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  intent = in
+  optional = F
+[tgrs_1]
+  standard_name = air_temperature_at_lowest_model_layer
+  long_name = mean temperature at lowest model layer
+  units = K
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  intent = in
+  optional = F
+[qgrs_1]
+  standard_name = water_vapor_specific_humidity_at_lowest_model_layer
+  long_name = specific humidity at lowest model layer
+  units = kg kg-1
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  intent = in
+  optional = F  
 [soiltyp_cpl]
   standard_name = soil_type_classification_for_coupling
   long_name = soil type at each grid cell for coupling
@@ -863,8 +890,8 @@
   intent = out
   optional = F
 [tskin_cpl]
-  standard_name = surface_skin_temperature_over_land_interstitial_for_coupling
-  long_name = surface skin temperature over land (temporary use as interstitial) for coupling
+  standard_name = surface_skin_temperature_over_land_for_coupling
+  long_name = surface skin temperature over land for coupling
   units = K
   dimensions = (horizontal_loop_extent)
   type = real
@@ -979,6 +1006,42 @@
   kind = kind_phys
   intent = out
   optional = F
+[wind_cpl]
+  standard_name = wind_speed_at_lowest_model_layer_for_coupling
+  long_name = wind speed at lowest model level for coupling
+  units = m s-1
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  intent = out
+  optional = F
+[ps_cpl]
+  standard_name = surface_air_pressure_for_coupling
+  long_name = surface pressure for coupling
+  units = Pa
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  intent = out
+  optional = F
+[t1_cpl]
+  standard_name = air_temperature_at_lowest_model_layer_for_coupling
+  long_name = 1st model layer air temperature for coupling
+  units = K
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  intent = out
+  optional = F
+[q1_cpl]
+  standard_name = water_vapor_specific_humidity_at_lowest_model_layer_for_coupling
+  long_name = 1st model layer specific humidity for coupling
+  units = kg kg-1
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  intent = out
+  optional = F  
 [errmsg]
   standard_name = ccpp_error_message
   long_name = error message for error handling in CCPP

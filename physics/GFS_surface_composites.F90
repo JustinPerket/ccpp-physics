@@ -36,6 +36,7 @@ contains
                                  qss, qss_wat, qss_lnd, qss_ice, hflx, hflx_wat, hflx_lnd, hflx_ice,                      &
                                  min_lakeice, min_seaice, &
                                  zorlo, zorll, zorli, &
+                                 tsurf_cpl, snwdph_cpl, sfcemis_cpl, z0rl_cpl, weasd_cpl, tprcp_cpl, land_cpl, & ! JP add
                                  errmsg, errflg)
 
       implicit none
@@ -64,6 +65,9 @@ contains
       !
       real(kind=kind_phys), dimension(im), intent(inout) :: zorlo, zorll, zorli
       !
+      real(kind=kind_phys), dimension(im),  intent(out)  :: tsurf_cpl,snwdph_cpl, sfcemis_cpl, z0rl_cpl, weasd_cpl, tprcp_cpl ! JP add
+      logical             , dimension(im),  intent(out)  :: land_cpl  ! JP add
+      
       real(kind=kind_phys), parameter :: timin = 173.0_kind_phys  ! minimum temperature allowed for snow/ice
 
       ! CCPP error handling
@@ -196,13 +200,13 @@ contains
         endif
         if (dry(i)) then                   ! Land
           uustar_lnd(i) = uustar(i)
-           weasd_lnd(i) = weasd(i)
-            tsfc_lnd(i) = tsfcl(i)
-           tsurf_lnd(i) = tsfcl(i)
-           snowd_lnd(i) = snowd(i)
-           semis_lnd(i) = semis_rad(i)
-             qss_lnd(i) = qss(i)
-            hflx_lnd(i) = hflx(i)
+          weasd_lnd(i) = weasd(i)
+          tsfc_lnd(i) = tsfcl(i)
+          tsurf_lnd(i) = tsfcl(i)
+          snowd_lnd(i) = snowd(i)
+          semis_lnd(i) = semis_rad(i)
+          qss_lnd(i) = qss(i)
+          hflx_lnd(i) = hflx(i)
         ! DH*
         else
           zorll(i) = huge
@@ -225,6 +229,15 @@ contains
         ! *DH
         end if
         if (nint(slmsk(i)) /= 1) slmsk(i)  = islmsk(i)
+        ! JP add for export to land comp, in lieu of land comp restart i/o
+        z0rl_cpl(i) = zorll(i)
+        tsurf_cpl(i) = tsurf_lnd(i) ! JP add
+        snwdph_cpl(i) = snowd(i) ! JP add
+        sfcemis_cpl(i) = semis_rad(i) ! JP add
+        weasd_cpl(i)   = weasd_lnd(i)
+        tprcp_cpl(i)   = tprcp_lnd(i)
+        land_cpl(i)    = dry(i)
+        ! JP end
       enddo
 
 ! to prepare to separate lake from ocean under water category
@@ -273,7 +286,9 @@ contains
 !!
    subroutine GFS_surface_composites_inter_run (im, dry, icy, wet, semis_wat, semis_lnd, semis_ice, adjsfcdlw, &
                                                 gabsbdlw_lnd, gabsbdlw_ice, gabsbdlw_wat,                      &
-                                                adjsfcusw, adjsfcdsw, adjsfcnsw, errmsg, errflg)
+                                                adjsfcusw, adjsfcdsw, adjsfcnsw,                               &
+                                                dlwflx_cpl, & ! JP add
+                                                errmsg, errflg)
 
       implicit none
 
@@ -285,6 +300,9 @@ contains
       real(kind=kind_phys), dimension(im), intent(inout) :: gabsbdlw_lnd, gabsbdlw_ice, gabsbdlw_wat
       real(kind=kind_phys), dimension(im), intent(out)   :: adjsfcusw
 
+      ! JP add
+      real(kind=kind_phys), dimension(im),  intent(out)  :: dlwflx_cpl
+      
       ! CCPP error handling
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
@@ -319,8 +337,13 @@ contains
         if (icy(i)) gabsbdlw_ice(i) = semis_ice(i) * adjsfcdlw(i)
         if (wet(i)) gabsbdlw_wat(i) = semis_wat(i) * adjsfcdlw(i)
         adjsfcusw(i) = adjsfcdsw(i) - adjsfcnsw(i)
-      enddo
 
+        ! JP add
+        dlwflx_cpl    (i) = gabsbdlw_lnd(i)
+      enddo
+      ! ! tmp add debug
+      ! write(6,'("GFS surf comp: dlwflx_cpl   - min/max/avg",3g16.6)') minval(dlwflx_cpl),   maxval(dlwflx_cpl),   sum(dlwflx_cpl)/size(dlwflx_cpl)
+      
    end subroutine GFS_surface_composites_inter_run
 
 end module GFS_surface_composites_inter
