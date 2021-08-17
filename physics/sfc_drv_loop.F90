@@ -218,15 +218,15 @@ contains
        end do ! im
 
 
-       write(6,'("sfc_drv_loop 2: rb_lnd   - min/max/avg",3g16.6)') minval(rb_lnd),   maxval(rb_lnd),   sum(rb_lnd)/size(rb_lnd)
-       write(6,'("sfc_drv_loop 2: fm_lnd   - min/max/avg",3g16.6)') minval(fm_lnd),   maxval(fm_lnd),   sum(fm_lnd)/size(fm_lnd)
-       write(6,'("sfc_drv_loop 2: fh_lnd   - min/max/avg",3g16.6)') minval(fh_lnd),   maxval(fh_lnd),   sum(fh_lnd)/size(fh_lnd)
-       write(6,'("sfc_drv_loop 2: fm10_lnd   - min/max/avg",3g16.6)') minval(fm10_lnd),   maxval(fm10_lnd),   sum(fm10_lnd)/size(fm10_lnd)
-       write(6,'("sfc_drv_loop 2: fh2_lnd   - min/max/avg",3g16.6)') minval(fh2_lnd),   maxval(fh2_lnd),   sum(fh2_lnd)/size(fh2_lnd)
-       write(6,'("sfc_drv_loop 2: cm   - min/max/avg",3g16.6)') minval(cm),   maxval(cm),   sum(cm)/size(cm)
-       write(6,'("sfc_drv_loop 2: ch   - min/max/avg",3g16.6)') minval(ch),   maxval(ch),   sum(ch)/size(ch)
-       write(6,'("sfc_drv_loop 2: stress   - min/max/avg",3g16.6)') minval(stress),   maxval(stress),   sum(stress)/size(stress)
-       write(6,'("sfc_drv_loop 2: ustar   - min/max/avg",3g16.6)') minval(ustar),   maxval(ustar),   sum(ustar)/size(ustar)
+       ! write(6,'("sfc_drv_loop 2: rb_lnd   - min/max/avg",3g16.6)') minval(rb_lnd),   maxval(rb_lnd),   sum(rb_lnd)/size(rb_lnd)
+       ! write(6,'("sfc_drv_loop 2: fm_lnd   - min/max/avg",3g16.6)') minval(fm_lnd),   maxval(fm_lnd),   sum(fm_lnd)/size(fm_lnd)
+       ! write(6,'("sfc_drv_loop 2: fh_lnd   - min/max/avg",3g16.6)') minval(fh_lnd),   maxval(fh_lnd),   sum(fh_lnd)/size(fh_lnd)
+       ! write(6,'("sfc_drv_loop 2: fm10_lnd   - min/max/avg",3g16.6)') minval(fm10_lnd),   maxval(fm10_lnd),   sum(fm10_lnd)/size(fm10_lnd)
+       ! write(6,'("sfc_drv_loop 2: fh2_lnd   - min/max/avg",3g16.6)') minval(fh2_lnd),   maxval(fh2_lnd),   sum(fh2_lnd)/size(fh2_lnd)
+       ! write(6,'("sfc_drv_loop 2: cm   - min/max/avg",3g16.6)') minval(cm),   maxval(cm),   sum(cm)/size(cm)
+       ! write(6,'("sfc_drv_loop 2: ch   - min/max/avg",3g16.6)') minval(ch),   maxval(ch),   sum(ch)/size(ch)
+       ! write(6,'("sfc_drv_loop 2: stress   - min/max/avg",3g16.6)') minval(stress),   maxval(stress),   sum(stress)/size(stress)
+       ! write(6,'("sfc_drv_loop 2: ustar   - min/max/avg",3g16.6)') minval(ustar),   maxval(ustar),   sum(ustar)/size(ustar)
 
        ! JP end
        
@@ -270,7 +270,9 @@ contains
 
     enddo ! iter
 
-    ! tmp debug
+
+    ! ! tmp debug
+
     ! write(6,*) "lsm_run: im", im
     ! write(6,*) "lsm_run: km", km
     ! write(6,*) "lsm_run: grav", grav
