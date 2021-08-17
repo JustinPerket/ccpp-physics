@@ -168,7 +168,8 @@ contains
        flag_guess(i)   = .false.
        flag_iter(i)    = .true.
     end do
-       
+
+    !! check some vars
     ! write(6,'("sfc_drv_loop: zf   - min/max/avg",3g16.6)') minval(zf),   maxval(zf),   sum(zf)/size(zf)
     ! write(6,'("sfc_drv_loop: prsik1   - min/max/avg",3g16.6)') minval(prsik1),   maxval(prsik1),   sum(prsik1)/size(prsik1)
     ! write(6,'("sfc_drv_loop: sigmaf   - min/max/avg",3g16.6)') minval(sigmaf),   maxval(sigmaf),   sum(sigmaf)/size(sigmaf)
@@ -269,7 +270,9 @@ contains
 
     enddo ! iter
 
+
     ! ! tmp debug
+
     ! write(6,*) "lsm_run: im", im
     ! write(6,*) "lsm_run: km", km
     ! write(6,*) "lsm_run: grav", grav
