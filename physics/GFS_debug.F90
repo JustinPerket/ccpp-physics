@@ -339,7 +339,7 @@
            call GFS_diagtoscreen_run (Model, Data(i)%Statein, Data(i)%Stateout, Data(i)%Sfcprop,    &
                                       Data(i)%Coupling, Data(i)%Grid, Data(i)%Tbd, Data(i)%Cldprop, &
                                       Data(i)%Radtend, Data(i)%Intdiag, Interstitial(1),            &
-                                      size(Interstitial), i, errmsg, errflg)
+                                      Model%nthreads, i, errmsg, errflg)
          end do
 
       end subroutine GFS_diagtoscreen_init
@@ -913,11 +913,11 @@
          errflg = 0
 
 
-         do i=1,size(Interstitial)
+         do i=1,size(Data)
            call GFS_interstitialtoscreen_run (Model, Data(1)%Statein, Data(1)%Stateout, Data(1)%Sfcprop,    &
                                               Data(1)%Coupling, Data(1)%Grid, Data(1)%Tbd, Data(1)%Cldprop, &
                                               Data(1)%Radtend, Data(1)%Intdiag, Interstitial(i),            &
-                                              size(Interstitial), -999, errmsg, errflg)
+                                              Model%nthreads, i, errmsg, errflg)
          end do
 
       end subroutine GFS_interstitialtoscreen_init
