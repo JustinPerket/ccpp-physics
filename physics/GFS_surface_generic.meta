@@ -457,7 +457,7 @@
   intent = in
   optional = F
 [prsl1]
-  standard_name = air_pressure_at_lowest_model_layer
+  standard_name = air_pressure_at_surface_adjacent_layer
   long_name =  Model layer 1 mean pressure
   units = Pa
   dimensions = (horizontal_loop_extent)
@@ -473,7 +473,7 @@
   intent = in
   optional = F
 [shdmin]
-  standard_name = minimum_vegetation_area_fraction
+  standard_name = min_vegetation_area_fraction
   long_name =  min fractional coverage of green veg
   units = frac
   dimensions = (horizontal_loop_extent)
@@ -481,7 +481,7 @@
   intent = in
   optional = F
 [shdmax]
-  standard_name = maximum_vegetation_area_fraction
+  standard_name = max_vegetation_area_fraction
   long_name =  max fractnl cover of green veg (not used)
   units = frac
   dimensions = (horizontal_loop_extent)
@@ -489,7 +489,7 @@
   intent = in
   optional = F
 [snoalb]
-  standard_name = upper_bound_on_max_albedo_over_deep_snow
+  standard_name = upper_bound_of_max_albedo_assuming_deep_snow
   long_name =  upper bound on max albedo over deep snow
   units = frac
   dimensions = (horizontal_loop_extent)
@@ -497,7 +497,7 @@
   intent = in
   optional = F
 [sfalb]
-  standard_name = surface_diffused_shortwave_albedo
+  standard_name = surface_albedo_for_diffused_shortwave_on_radiation_timestep
   long_name =  mean surface diffused shortwave albedo
   units = frac
   dimensions = (horizontal_loop_extent)
@@ -537,7 +537,7 @@
   intent = in
   optional = F
 [srflag]
-  standard_name = flag_for_precipitation_type
+  standard_name = precipitation_type
   long_name =  flag for snow or rain precipitation
   units = flag
   dimensions = (horizontal_loop_extent)
@@ -545,10 +545,10 @@
   intent = in
   optional = F
 [smc]
-  standard_name = volume_fraction_of_soil_moisture
+  standard_name = volume_fraction_of_condensed_water_in_soil
   long_name =  volumetric fraction of soil moisture
   units = frac
-  dimensions = (horizontal_loop_extent,soil_vertical_dimension)
+  dimensions = (horizontal_loop_extent,vertical_dimension_of_soil)
   type = real
   intent = in
   optional = F
@@ -556,15 +556,15 @@
   standard_name = soil_temperature
   long_name =  soil temperature
   units = K
-  dimensions = (horizontal_loop_extent,soil_vertical_dimension)
+  dimensions = (horizontal_loop_extent,vertical_dimension_of_soil)
   type = real
   intent = in
   optional = F
 [slc]
-  standard_name = volume_fraction_of_unfrozen_soil_moisture
+  standard_name = volume_fraction_of_unfrozen_water_in_soil
   long_name =  volume fraction of unfrozen soil moisture
   units = frac
-  dimensions = (horizontal_loop_extent,soil_vertical_dimension)
+  dimensions = (horizontal_loop_extent,vertical_dimension_of_soil)
   type = real
   intent = in
   optional = F
@@ -611,7 +611,7 @@
   intent = in
   optional = F
 [tgrs_1]
-  standard_name = air_temperature_at_lowest_model_layer
+  standard_name = air_temperature_at_surface_adjacent_layer
   long_name = mean temperature at lowest model layer
   units = K
   dimensions = (horizontal_loop_extent)
@@ -620,7 +620,7 @@
   intent = in
   optional = F
 [qgrs_1]
-  standard_name = water_vapor_specific_humidity_at_lowest_model_layer
+  standard_name = specific_humidity_at_surface_adjacent_layer
   long_name = specific humidity at lowest model layer
   units = kg kg-1
   dimensions = (horizontal_loop_extent)
@@ -710,7 +710,7 @@
   intent = out
   optional = F
 [prsl1_cpl]
-  standard_name = air_pressure_at_lowest_model_layer_for_coupling
+  standard_name = air_pressure_at_surface_adjacent_layer_for_coupling
   long_name = Model layer 1 mean pressure for coupling
   units = Pa
   dimensions = (horizontal_loop_extent)
@@ -773,7 +773,7 @@
   intent = out
   optional = F
 [snoalb_cpl]
-  standard_name = upper_bound_on_max_albedo_over_deep_snow_for_coupling
+  standard_name = upper_bound_of_max_albedo_assuming_deep_snow_for_coupling
   long_name = upper bound on max albedo over deep snow for coupling
   units = frac
   dimensions = (horizontal_loop_extent)
@@ -872,10 +872,10 @@
   intent = out
   optional = F
 [smc_cpl]
-  standard_name = volume_fraction_of_soil_moisture_for_coupling
+  standard_name = volume_fraction_of_condensed_water_in_soil_for_coupling
   long_name = volumetric fraction of soil moisture for coupling
   units = frac
-  dimensions = (horizontal_loop_extent,soil_vertical_dimension)
+  dimensions = (horizontal_loop_extent,vertical_dimension_of_soil)
   type = real
   kind = kind_phys
   intent = out
@@ -884,16 +884,16 @@
   standard_name = soil_temperature_for_coupling
   long_name = soil temperature for coupling
   units = K
-  dimensions = (horizontal_loop_extent,soil_vertical_dimension)
+  dimensions = (horizontal_loop_extent,vertical_dimension_of_soil)
   type = real
   kind = kind_phys
   intent = out
   optional = F
 [slc_cpl]
-  standard_name = volume_fraction_of_unfrozen_soil_moisture_for_coupling
+  standard_name = volume_fraction_of_unfrozen_water_in_soil_for_coupling
   long_name = volume fraction of unfrozen soil moisture for coupling
   units = frac
-  dimensions = (horizontal_loop_extent,soil_vertical_dimension)
+  dimensions = (horizontal_loop_extent,vertical_dimension_of_soil)
   type = real
   kind = kind_phys
   intent = out
@@ -980,7 +980,7 @@
   intent = out
   optional = F
 [t1_cpl]
-  standard_name = air_temperature_at_lowest_model_layer_for_coupling
+  standard_name = air_temperature_at_surface_adjacent_layer_for_coupling
   long_name = 1st model layer air temperature for coupling
   units = K
   dimensions = (horizontal_loop_extent)
