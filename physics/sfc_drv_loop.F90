@@ -6,6 +6,8 @@
 
 module noah_loop
 
+  use machine,           only: kind_phys
+
   implicit none
 
   private
@@ -15,25 +17,55 @@ contains
 
 !>\ingroup Noah_Loop
 !! This subroutine contains the CCPP-compliant noah_loop_init to initialize soil vegetation.
+!! It follows lsm_noah_init 
 !! \section arg_table_noah_loop_init Argument Table
 !! \htmlinclude noah_loop_init.html
 !!
-  subroutine noah_loop_init(me, isot, ivegsrc, nlunit,errmsg, errflg)
+  subroutine noah_loop_init(lsm, lsm_noah, me, isot, ivegsrc, nlunit, &
+                            pores, resid, errmsg, errflg)
 
     use set_soilveg_mod,  only: set_soilveg
+    use namelist_soilveg 
+    
     implicit none
-
-    integer,              intent(in)  :: me, isot, ivegsrc, nlunit
-    character(len=*),     intent(out) :: errmsg
-    integer,              intent(out) :: errflg
+    integer,               intent(in) :: lsm
+    integer,               intent(in) :: lsm_noah   
+    integer,               intent(in) :: me, isot, ivegsrc, nlunit
+    real (kind=kind_phys), dimension(:), intent(out) :: pores, resid
+    character(len=*),      intent(out) :: errmsg
+    integer,               intent(out) :: errflg
 
     !     Initialize CCPP error handling variables
     errmsg = ''
     errflg = 0
 
+    ! Consistency checks
+    if (lsm/=lsm_noah) then
+       write(errmsg,'(*(a))') 'Logic error: namelist choice of ' // &
+       'LSM is different from Noah'
+       errflg = 1
+       return
+    end if
+
+    if (ivegsrc > 2) then
+       errmsg = 'The NOAH LSM expects that the ivegsrc physics '// &
+       'namelist parameter is 0, 1, or 2. Exiting...'
+       errflg = 1
+       return
+    end if
+    if (isot > 1) then
+       errmsg = 'The NOAH LSM expects that the isot physics '// &
+       'namelist parameter is 0, or 1. Exiting...'
+       errflg = 1
+       return
+    end if
+
+    
     !---  initialize soil vegetation
     !write(*,*) 'JP in noah_loop_init'
     call set_soilveg(me, isot, ivegsrc, nlunit)
+    pores (:) = maxsmc (:)
+    resid (:) = drysmc (:)    
 
   end subroutine noah_loop_init
 
@@ -56,11 +88,14 @@ contains
                                 !  ---  inputs:
        im, km, grav, cp, hvap, rd, eps, epsm1, rvrdm1, ps,          & 
        t1, q1, soiltyp, vegtype, sigmaf,                            &
-       sfcemis, dlwflx, dswsfc, snet, delt, tg3, cm, ch,            &
+       sfcemis, dlwflx, dswsfc, delt, tg3, cm, ch,                  &
        prsl1, prslki, zf, land, wind, slopetyp,                     &
        shdmin, shdmax, snoalb, sfalb, flag_iter, flag_guess,        &
        lheatstrg, isot, ivegsrc,                                    &
        bexppert, xlaipert, vegfpert,pertvegf,                       & ! sfc perts, mgehne
+       albdvis_lnd, albdnir_lnd, albivis_lnd, albinir_lnd,          &
+       adjvisbmd, adjnirbmd, adjvisdfd, adjnirdfd,                  &
+       
                                 !     ---  in/outs:
        weasd, snwdph, tskin, tprcp, srflag, smc, stc, slc,          &
        canopy, trans, tsurf, z0rl,                                  &
@@ -70,13 +105,13 @@ contains
        smcwlt2, smcref2, wet1,                                      &
                                 !! ARGS FROM  stab_prep_lnd (minus those from noah
                                 !  ---  inputs:
-       prsik1,z0pert,ztpert,ustar,                           &
+       prsik1,z0pert,ztpert,ustar, prslk1, garea, thsfc_loc,        &
                                 !  ---  outputs:
                                 !! ARGS FROM stability (minus those above)
                                 !  ---  inputs:
                                 !  ---  outputs:
        rb_lnd, fm_lnd, fh_lnd, fm10_lnd, fh2_lnd,                   &
-       stress,                                                  &           
+       stress,                                                      &           
                                 !!
        errmsg, errflg                                               &
        )
@@ -84,7 +119,6 @@ contains
     use lsm_noah, only: lsm_noah_run
     use sfc_diff, only: stab_prep_lnd, stability
 
-    use machine,           only: kind_phys
     !     for lsm_noah
     use funcphys, only : fpvs
     use surface_perturbation, only : ppfbet
@@ -112,15 +146,15 @@ contains
     integer, dimension(im), intent(in) :: soiltyp, vegtype, slopetyp
 
     real (kind=kind_phys), dimension(im), intent(in) :: ps,           &
-         t1, q1, sigmaf, sfcemis, dlwflx, dswsfc, snet, tg3,          &
-         prsl1, prslki, wind, shdmin, shdmax,                     &
+         t1, q1, sigmaf, sfcemis, dlwflx, dswsfc, tg3,                &
+         prsl1, prslki, wind, shdmin, shdmax,                         &
          snoalb, sfalb, zf,                                           &
-         bexppert, xlaipert, vegfpert
-
+         bexppert, xlaipert, vegfpert,                                &
+         albdvis_lnd, albdnir_lnd, albivis_lnd, albinir_lnd,          &
+         adjvisbmd, adjnirbmd, adjvisdfd, adjnirdfd
+    
     real (kind=kind_phys),  intent(in) :: delt
-
     logical, dimension(im), intent(in) :: land
-
     logical, intent(in) :: lheatstrg
 
     !     ---  in/out:
@@ -145,16 +179,19 @@ contains
     !  ---  outputs:
 
     !  ---  locals:
-    real(kind=kind_phys) :: tem1,tem2,czilc,thv1
+    real(kind=kind_phys) :: tem1,tem2,czilc,tv1,thv1
     real(kind=kind_phys), parameter :: one=1.0_kp, zero=0.0_kp, half=0.5_kp, &
          zmin=1.0e-6_kp, log01=log(0.01_kp), log05=log(0.05_kp), log07=log(0.07_kp)
-    real(kind=kind_phys) :: tvs, z0max, ztmax, virtfac
+    real(kind=kind_phys) :: tvs, z0max, ztmax, virtfac, zvfun, gdx
 
 !!!     for stability      ----------------------------------------------
     real(kind=kind_phys), dimension(im), intent(inout) :: rb_lnd, fm_lnd,    &
          fh_lnd, fm10_lnd, fh2_lnd,stress,ustar
 
-
+!!! for before stab_prep_lnd
+    logical, intent(in) :: thsfc_loc ! Flag for reference pressure in theta calculation
+    real(kind=kind_phys), dimension(im), intent(in) :: garea, prslk1
+    
     real(kind=kind_phys), parameter :: qmin=1.0e-8_kp
 
     !write(*,*) 'JP in noah_loop_run 1'
@@ -189,9 +226,22 @@ contains
        !!!     sfc_diff
        do i=1,im
           if(flag_iter(i)) then
-             virtfac = one + rvrdm1 * max(q1(i),qmin)
-             thv1    = t1(i) * prslki(i) * virtfac
+             ztmax = 1.
+             
+             virtfac = one + rvrdm1 * max(q1(i),qmin)             
+             !thv1    = t1(i) * prslki(i) * virtfac
+             tv1 = t1(i) * virtfac ! Virtual temperature in middle of lowest layer
+             if(thsfc_loc) then ! Use local potential temperature
+                thv1  = t1(i) * prslki(i) * virtfac
+             else ! Use potential temperature reference to 1000 hPa
+                thv1    = t1(i) / prslk1(i) * virtfac
+             endif
 
+             zvfun = zero
+             gdx   = sqrt(garea(i))             
+
+             
+             
              if (land(i)) then ! Some land
              !! don't think land is exporting from atm after move to sfc generic pre. test workaround:
              !if (soiltyp(i) < 14.0) then ! Some land
@@ -201,14 +251,14 @@ contains
                      (zf(i),prsik1(i),sigmaf(i),vegtype(i),shdmax(i),  &
                      ivegsrc,z0pert(i),ztpert(i),                      &
                      tskin(i),tsurf(i),z0rl(i),                        &
-                     ustar(i),virtfac,                                 &
+                     ustar(i),virtfac, thsfc_loc,                       &
                                 !     ---  outputs:
-                     z0max,ztmax,tvs   ) 
+                     z0max,ztmax,tvs,zvfun   ) 
                 
                 call stability                                        &
                                 !     ---  inputs:
-                     (zf(i), snwdph(i), thv1, wind(i),                &
-                     z0max, ztmax, tvs, grav,                         &
+                     (zf(i), zvfun, gdx, tv1, thv1, wind(i),       &
+                     z0max, ztmax, tvs, grav, thsfc_loc,              &
                                 !     ---  outputs:
                      rb_lnd(i), fm_lnd(i), fh_lnd(i), fm10_lnd(i),    &
                      fh2_lnd(i),cm(i), ch(i), stress(i),              &
@@ -242,11 +292,13 @@ contains
        call lsm_noah_run                                               &
             ( im, km, grav, cp, hvap, rd, eps, epsm1, rvrdm1, ps,      & !  ---  inputs:
             t1, q1, soiltyp, vegtype, sigmaf,                          &
-            sfcemis, dlwflx, dswsfc, snet, delt, tg3, cm, ch,          &
+            sfcemis, dlwflx, dswsfc, delt, tg3, cm, ch,          &
             prsl1, prslki, zf, land, wind, slopetyp,                   &
             shdmin, shdmax, snoalb, sfalb, flag_iter, flag_guess,      &
             lheatstrg, isot, ivegsrc,                                  &
             bexppert, xlaipert, vegfpert,pertvegf,                     & ! sfc perts, mgehne
+            albdvis_lnd, albdnir_lnd, albivis_lnd, albinir_lnd,        &  
+            adjvisbmd, adjnirbmd, adjvisdfd, adjnirdfd,                &              
                                 !     ---  in/outs:
             weasd, snwdph, tskin, tprcp, srflag, smc, stc, slc,        &
             canopy, trans, tsurf, z0rl,                                &
@@ -295,7 +347,6 @@ contains
     ! write(6,'("lsm_run: sfcemis   - min/max/avg",3g16.6)') minval(sfcemis),   maxval(sfcemis),   sum(sfcemis)/size(sfcemis)
     ! write(6,'("lsm_run: dlwflx   - min/max/avg",3g16.6)') minval(dlwflx),   maxval(dlwflx),   sum(dlwflx)/size(dlwflx)
     ! write(6,'("lsm_run: dswsfc   - min/max/avg",3g16.6)') minval(dswsfc),   maxval(dswsfc),   sum(dswsfc)/size(dswsfc)
-    ! write(6,'("lsm_run: snet   - min/max/avg",3g16.6)') minval(snet),   maxval(snet),   sum(snet)/size(snet)
     ! write(6,'("lsm_run: tg3   - min/max/avg",3g16.6)') minval(tg3),   maxval(tg3),   sum(tg3)/size(tg3)
     ! write(6,'("lsm_run: cm   - min/max/avg",3g16.6)') minval(cm),   maxval(cm),   sum(cm)/size(cm)
     ! write(6,'("lsm_run: ch   - min/max/avg",3g16.6)') minval(ch),   maxval(ch),   sum(ch)/size(ch)

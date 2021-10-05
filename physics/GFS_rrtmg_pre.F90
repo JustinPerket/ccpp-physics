@@ -18,7 +18,7 @@
       ! in the CCPP version - they are defined in the interstitial_create routine
       subroutine GFS_rrtmg_pre_run (im, levs, lm, lmk, lmp, n_var_lndp,        &
         imfdeepcnv, imfdeepcnv_gf, me, ncnd, ntrac, num_p3d, npdf3d, ncnvcld3d,&
-        ntqv, ntcw,ntiw, ntlnc, ntinc, ncld, ntrw, ntsw, ntgl, ntwa, ntoz,     &
+        ntqv, ntcw,ntiw, ntlnc, ntinc, ntrw, ntsw, ntgl, ntwa, ntoz,           &
         ntclamt, nleffr, nieffr, nseffr, lndp_type, kdt, imp_physics,          &
         imp_physics_thompson, imp_physics_gfdl, imp_physics_zhao_carr,         &
         imp_physics_zhao_carr_pdf, imp_physics_mg, imp_physics_wsm6,           &
@@ -26,8 +26,8 @@
         ltaerosol, lgfdlmprad, uni_cld, effr_in, do_mynnedmf, lmfshal,         &
         lmfdeep2, fhswr, fhlwr, solhr, sup, con_eps, epsm1, fvirt,             &
         rog, rocp, con_rd, xlat_d, xlat, xlon, coslat, sinlat, tsfc, slmsk,    &
-        prsi, prsl, prslk, tgrs, sfc_wts, mg_cld, effrr_in, pert_clds,sppt_wts,&
-        sppt_amp, cnvw_in, cnvc_in, qgrs, aer_nm, dx, icloud,                  & !inputs from here and above
+        prsi, prsl, prslk, tgrs, sfc_wts, mg_cld, effrr_in, pert_clds,         &
+        sppt_wts, sppt_amp, cnvw_in, cnvc_in, qgrs, aer_nm, dx, icloud,        & !inputs from here and above
         coszen, coszdg, effrl_inout, effri_inout, effrs_inout,                 &
         clouds1, clouds2, clouds3, clouds4, clouds5,                           & !in/out from here and above
         kd, kt, kb, mtopa, mbota, raddt, tsfg, tsfa, de_lgth, alb1d, delp, dz, & !output from here and below
@@ -83,7 +83,7 @@
                                            imfdeepcnv,                         &
                                            imfdeepcnv_gf, me, ncnd, ntrac,     &
                                            num_p3d, npdf3d, ncnvcld3d, ntqv,   &
-                                           ntcw, ntiw, ntlnc, ntinc, ncld,     &
+                                           ntcw, ntiw, ntlnc, ntinc,           &
                                            ntrw, ntsw, ntgl, ntwa, ntoz,       &
                                            ntclamt, nleffr, nieffr, nseffr,    &
                                            lndp_type,                          &
@@ -122,54 +122,52 @@
       real(kind=kind_phys), dimension(:,:), intent(inout) :: effrl_inout,      &
                                                              effri_inout,      &
                                                              effrs_inout
-      real(kind=kind_phys), dimension(im,lm+LTP), intent(inout) :: clouds1,    &
+      real(kind=kind_phys), dimension(:,:), intent(inout) :: clouds1,          &
                                                              clouds2, clouds3, &
                                                              clouds4, clouds5
 
-      integer,                                      intent(out) :: kd, kt, kb
+      integer,                              intent(out) :: kd, kt, kb
 
-      integer, dimension(im,3),                     intent(out) :: mbota, mtopa
+      integer, dimension(:,:),              intent(out) :: mbota, mtopa
 
-      real(kind=kind_phys),                         intent(out) :: raddt
+      real(kind=kind_phys),                 intent(out) :: raddt
 
-      real(kind=kind_phys), dimension(im),          intent(out) :: tsfg, tsfa
-      real(kind=kind_phys), dimension(im),          intent(out) :: de_lgth,    &
-                                                                   alb1d
+      real(kind=kind_phys), dimension(:),   intent(out) :: tsfg, tsfa
+      real(kind=kind_phys), dimension(:),   intent(out) :: de_lgth,    &
+                                                           alb1d
 
-      real(kind=kind_phys), dimension(im,lm+LTP),   intent(out) :: delp, dz,   &
-                                                                   plyr, tlyr, &
-                                                                   qlyr, olyr
+      real(kind=kind_phys), dimension(:,:), intent(out) :: delp, dz,   &
+                                                           plyr, tlyr, &
+                                                           qlyr, olyr
 
-      real(kind=kind_phys), dimension(im,lm+1+LTP), intent(out) :: plvl, tlvl
+      real(kind=kind_phys), dimension(:,:), intent(out) :: plvl, tlvl
 
+      real(kind=kind_phys), dimension(:,:), intent(out) :: gasvmr_co2, &
+                                                           gasvmr_n2o, &
+                                                           gasvmr_ch4, &
+                                                           gasvmr_o2,  &
+                                                           gasvmr_co,  &
+                                                           gasvmr_cfc11,&
+                                                           gasvmr_cfc12,&
+                                                           gasvmr_cfc22,&
+                                                           gasvmr_ccl4,&
+                                                           gasvmr_cfc113
+      real(kind=kind_phys), dimension(:,:), intent(out) :: aerodp
+      real(kind=kind_phys), dimension(:,:), intent(out) :: clouds6,   &
+                                                           clouds7,   &
+                                                           clouds8,   &
+                                                           clouds9,   &
+                                                           cldfra
+      real(kind=kind_phys), dimension(:,:), intent(out) :: cldsa
 
+      real(kind=kind_phys), dimension(:,:,:), intent(out) :: faersw1,&
+                                                             faersw2,&
+                                                             faersw3
 
-      real(kind=kind_phys), dimension(im,lm+LTP),   intent(out) :: gasvmr_co2, &
-                                                                   gasvmr_n2o, &
-                                                                   gasvmr_ch4, &
-                                                                   gasvmr_o2,  &
-                                                                   gasvmr_co,  &
-                                                                   gasvmr_cfc11,&
-                                                                   gasvmr_cfc12,&
-                                                                   gasvmr_cfc22,&
-                                                                   gasvmr_ccl4,&
-                                                                   gasvmr_cfc113
-      real(kind=kind_phys), dimension(im,NSPC1),     intent(out) :: aerodp
-      real(kind=kind_phys), dimension(im,lm+LTP),    intent(out) :: clouds6,   &
-                                                                    clouds7,   &
-                                                                    clouds8,   &
-                                                                    clouds9,   &
-                                                                    cldfra
-      real(kind=kind_phys), dimension(im,5),            intent(out) :: cldsa
-
-      real(kind=kind_phys), dimension(im,lm+LTP,NBDSW), intent(out) :: faersw1,&
-                                                                       faersw2,&
-                                                                       faersw3
-
-      real(kind=kind_phys), dimension(im,lm+LTP,NBDLW), intent(out) :: faerlw1,&
-                                                                       faerlw2,&
-                                                                       faerlw3
-      real(kind=kind_phys), dimension(im,lm+LTP),       intent(out) :: alpha
+      real(kind=kind_phys), dimension(:,:,:), intent(out) :: faerlw1,&
+                                                             faerlw2,&
+                                                             faerlw3
+      real(kind=kind_phys), dimension(:,:),   intent(out) :: alpha
 
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
@@ -204,7 +202,7 @@
       real(kind=kind_phys), dimension(im,lm+LTP,NF_VGAS)       :: gasvmr
       real(kind=kind_phys), dimension(im,lm+LTP,NBDSW,NF_AESW) :: faersw
       real(kind=kind_phys), dimension(im,lm+LTP,NBDLW,NF_AELW) :: faerlw
-      
+
       ! for stochastic cloud perturbations
       real(kind=kind_phys), dimension(im) :: cldp1d
       real (kind=kind_phys) :: alpha0,beta0,m,s,cldtmp,tmp_wt,cdfz
@@ -352,7 +350,7 @@
           if ( plvl(i,lla) <= prsmin ) plvl(i,lla) = 2.0*prsmin
           plyr(i,lyb)   = 0.5 * plvl(i,lla)
           tlyr(i,lyb)   = tlyr(i,lya)
-          prslk1(i,lyb) = (plyr(i,lyb)*0.001) ** rocp ! plyr in Pa
+          prslk1(i,lyb) = (plyr(i,lyb)*0.001) ** rocp ! plyr in hPa
           rhly(i,lyb)   = rhly(i,lya)
           qstl(i,lyb)   = qstl(i,lya)
         enddo
@@ -596,7 +594,7 @@
 !!      call module_radiation_clouds::progcld1()
 !!    - For Zhao/Moorthi's prognostic cloud+pdfcld,
 !!      call module_radiation_clouds::progcld3()
-!!      call module_radiation_clouds::progclduni() for unified cloud and ncld=2
+!!      call module_radiation_clouds::progclduni() for unified cloud and ncnd>=2
 
 !  --- ...  obtain cloud information for radiation calculations
 
@@ -638,12 +636,12 @@
             enddo
           enddo
           ! for Thompson MP - prepare variables for calc_effr
-          if (imp_physics == imp_physics_thompson .and. ltaerosol) then
+          if_thompson: if (imp_physics == imp_physics_thompson .and. ltaerosol) then
             do k=1,LMK
               do i=1,IM
-                qvs = qgrs(i,k,ntqv)
+                qvs = qlyr(i,k)
                 qv_mp (i,k) = qvs/(1.-qvs)
-                rho   (i,k) = con_eps*prsl(i,k)/(con_rd*tgrs(i,k)*(qv_mp(i,k)+con_eps))
+                rho   (i,k) = con_eps*plyr(i,k)*100./(con_rd*tlyr(i,k)*(qv_mp(i,k)+con_eps))
                 orho  (i,k) = 1.0/rho(i,k)
                 qc_mp (i,k) = tracer1(i,k,ntcw)/(1.-qvs)
                 qi_mp (i,k) = tracer1(i,k,ntiw)/(1.-qvs)
@@ -656,9 +654,9 @@
           elseif (imp_physics == imp_physics_thompson) then
             do k=1,LMK
               do i=1,IM
-                qvs = qgrs(i,k,ntqv)
+                qvs = qlyr(i,k)
                 qv_mp (i,k) = qvs/(1.-qvs)
-                rho   (i,k) = con_eps*prsl(i,k)/(con_rd*tgrs(i,k)*(qv_mp(i,k)+con_eps))
+                rho   (i,k) = con_eps*plyr(i,k)*100./(con_rd*tlyr(i,k)*(qv_mp(i,k)+con_eps))
                 orho  (i,k) = 1.0/rho(i,k)
                 qc_mp (i,k) = tracer1(i,k,ntcw)/(1.-qvs)
                 qi_mp (i,k) = tracer1(i,k,ntiw)/(1.-qvs)
@@ -667,7 +665,7 @@
                 ni_mp (i,k) = tracer1(i,k,ntinc)/(1.-qvs)
               enddo
             enddo
-          endif
+          endif if_thompson
         endif
         do n=1,ncndl
           do k=1,LMK
@@ -692,11 +690,6 @@
             ccnd(:,:,1) = ccnd(:,:,1) + tracer1(:,1:LMK,ntiw)
             ccnd(:,:,1) = ccnd(:,:,1) + tracer1(:,1:LMK,ntsw)
             ccnd(:,:,1) = ccnd(:,:,1) + tracer1(:,1:LMK,ntgl)
-
-!          else
-!            do j=1,ncld
-!              ccnd(:,:,1) = ccnd(:,:,1) + tracer1(:,1:LMK,ntcw+j-1) ! cloud condensate amount
-!            enddo
           endif
           do k=1,LMK
             do i=1,IM
@@ -903,8 +896,8 @@
 
           do i =1, im
             do k =1, lmk
-               qc_save(i,k) = ccnd(i,k,1)  
-               qi_save(i,k) = ccnd(i,k,2) 
+               qc_save(i,k) = ccnd(i,k,1)
+               qi_save(i,k) = ccnd(i,k,2)
                qs_save(i,k) = ccnd(i,k,4)
             enddo
           enddo
@@ -951,7 +944,7 @@
         if (imp_physics == imp_physics_zhao_carr .or. imp_physics == imp_physics_mg) then ! zhao/moorthi's prognostic cloud scheme
                                          ! or unified cloud and/or with MG microphysics
 
-          if (uni_cld .and. ncld >= 2) then
+          if (uni_cld .and. ncndl >= 2) then
             call progclduni (plyr, plvl, tlyr, tvly, ccnd, ncndl,         & !  ---  inputs
                              xlat, xlon, slmsk, dz, delp,                 &
                              IM, LMK, LMP, cldcov,                        &
