@@ -61,7 +61,7 @@
 ! should be moved to inside the mynn:
       use machine , only : kind_phys
       use module_radiation_clouds, only : gethml
-      use radcons, only: qmin               ! Minimum vlaues for varius calculations
+      use radcons, only: qmin               ! Minimum values for various calculations
       use funcphys, only: fpvs              ! Function ot compute sat. vapor pressure over liq.
 !------------------------------------------------------------------- 
       implicit none
@@ -265,8 +265,8 @@
                   if(qi(i,k)>1.E-8)clouds5(i,k)=max(173.45 + 2.14*Tc, 20.)
                 endif
 
-                if ( do_mynnedmf .or. (imp_physics == imp_physics_gfdl) ) then
-                  !print *,'MYNN PBL or GFDL MP cldcov used'
+                if ( do_mynnedmf ) then
+                  !print *,'MYNN PBL cldcov used'
                 else
                   !print *,'GF with Xu-Randall cloud fraction'
                   ! Xu-Randall (1996) cloud fraction
@@ -289,7 +289,7 @@
                   endif
                   !print*,"XuRandla- cf:",clouds1(i,k)," rh:",rhgrid," qt:",h2oliq
                   !print*,"XuRandlb- clwt:",clwt," qsat:",qsat," p:",p3d(i,k)
-                endif ! not MYNN PBL or GFDL MP
+                endif ! not MYNN PBL
               endif ! qci_conv
             enddo
           enddo
