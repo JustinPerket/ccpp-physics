@@ -1,4 +1,4 @@
-!>  \file radlw_main.f
+!>  \file radlw_main.F90
 !!  This file contains NCEP's modifications of the rrtmg-lw radiation
 !!  code from AER.
 
@@ -285,7 +285,8 @@
       use mersenne_twister, only : random_setseed, random_number,       &
      &                             random_stat
       use machine,          only : kind_phys,                           &
-     &                             im => kind_io4, rb => kind_phys
+     &                             im => kind_io4, rb => kind_phys,     &
+     &                             kind_dbl_prec
 
       use module_radlw_parameters
 !
@@ -383,20 +384,18 @@
 
 !  ---  public accessable subprograms
 
-      public rrtmg_lw_init, rrtmg_lw_run, rrtmg_lw_finalize, rlwinit
+      public rrtmg_lw_run, rlwinit
 
 
 ! ================
       contains
 ! ================
 
-         subroutine rrtmg_lw_init ()
-         end subroutine rrtmg_lw_init
 
-!> \defgroup module_radlw_main GFS RRTMG Longwave Module 
-!! \brief This module includes NCEP's modifications of the RRTMG-LW radiation
+!> \defgroup module_radlw_main GFS RRTMG-LW Main Module
+!>  This module includes NCEP's modifications of the RRTMG-LW radiation
 !! code from AER.
-!!
+!> @{
 !! The RRTMG-LW package includes three files:
 !! - radlw_param.f, which contains:
 !!  - module_radlw_parameters: band parameters set up
@@ -420,7 +419,6 @@
 !! \htmlinclude rrtmg_lw_run.html
 !!
 !> \section gen_lwrad RRTMG Longwave Radiation Scheme General Algorithm
-!> @{
       subroutine rrtmg_lw_run                                           &
      &     ( plyr,plvl,tlyr,tlvl,qlyr,olyr,gasvmr_co2, gasvmr_n2o,      &   !  ---  inputs
      &       gasvmr_ch4, gasvmr_o2, gasvmr_co, gasvmr_cfc11,            &
@@ -1306,11 +1304,6 @@
 !...................................
       end subroutine rrtmg_lw_run
 !-----------------------------------
-!> @}
-      subroutine rrtmg_lw_finalize ()
-      end subroutine rrtmg_lw_finalize 
-
-
 
 !> \ingroup module_radlw_main
 !> \brief This subroutine performs calculations necessary for the initialization
@@ -1322,7 +1315,6 @@
 !! spectral band are reduced from 256 g-point intervals to 140.
 !!\param me        print control for parallel process
 !!\section rlwinit_gen rlwinit General Algorithm
-!! @{
       subroutine rlwinit                                                &
      &     ( me ) !  ---  inputs
 !  ---  outputs: (none)
@@ -1363,7 +1355,8 @@
 !           =1: maximum/random overlapping clouds                       !
 !           =2: maximum overlap cloud (isubcol>0 only)                  !
 !           =3: decorrelation-length overlap (for isubclw>0 only)       !
-!           =4: exponential overlap cloud
+!           =4: exponential cloud overlap (AER)                         !
+!           =5: exponential-random cloud overlap (AER)                  !
 !                                                                       !
 !  *******************************************************************  !
 !  original code description                                            !
@@ -1407,7 +1400,7 @@
 !
 !===> ... begin here
 !
-      if ( iovr<0 .or. iovr>4 ) then
+      if ( iovr<0 .or. iovr>5 ) then
         print *,'  *** Error in specification of cloud overlap flag',   &
      &          ' IOVR=',iovr,' in RLWINIT !!'
         stop
@@ -1518,7 +1511,6 @@
 
 !...................................
       end subroutine rlwinit
-!! @}
 !-----------------------------------
 
 
@@ -1526,7 +1518,6 @@
 !> \brief This subroutine computes the cloud optical depth(s) for each cloudy
 !! layer and g-point interval.
 !!\param cfrac           layer cloud fraction
-!!\n     ---  for  ilwcliq > 0 (prognostic cloud scheme)  - - -
 !!\param cliqp           layer in-cloud liq water path (\f$g/m^2\f$)
 !!\param reliq           mean eff radius for liq cloud (micron)
 !!\param cicep           layer in-cloud ice water path (\f$g/m^2\f$)
@@ -1535,25 +1526,16 @@
 !!\param cdat2           effective radius for rain drop (micron)
 !!\param cdat3           layer snow flake water path(\f$g/m^2\f$)
 !!\param cdat4           mean effective radius for snow flake(micron)
-!!\n     ---  for ilwcliq = 0  (diagnostic cloud scheme)  - - -
-!!\param cliqp           not used
-!!\param cicep           not used
-!!\param reliq           not used
-!!\param reice           not used
-!!\param cdat1           layer cloud optical depth
-!!\param cdat2           layer cloud single scattering albedo
-!!\param cdat3           layer cloud asymmetry factor
-!!\param cdat4           optional use
 !!\param nlay            number of layer number
 !!\param nlp1            number of veritcal levels
 !!\param ipseed          permutation seed for generating random numbers (isubclw>0)
 !!\param dz              layer thickness (km) 
 !!\param de_lgth         layer cloud decorrelation length (km)  
+!!\param iovr            cloud overlapping control flag
 !!\param alpha           EXP/ER cloud overlap decorrelation parameter
 !!\param cldfmc          cloud fraction for each sub-column
 !!\param taucld          cloud optical depth for bands (non-mcica)
 !!\section gen_cldprop cldprop General Algorithm
-!> @{
       subroutine cldprop                                                &
      &     ( cfrac,cliqp,reliq,cicep,reice,cdat1,cdat2,cdat3,cdat4,     & !  ---  inputs
      &       nlay, nlp1, ipseed, dz, de_lgth, iovr, alpha,              &
@@ -1859,7 +1841,6 @@
 ! ..................................
       end subroutine cldprop
 ! ----------------------------------
-!> @}
 
 !>\ingroup module_radlw_main
 !>\brief This suroutine computes sub-colum cloud profile flag array.
@@ -1871,7 +1852,6 @@
 !!\param alpha       EXP/ER cloud overlap decorrelation parameter
 !!\param lcloudy     sub-colum cloud profile flag array
 !!\section mcica_subcol_gen mcica_subcol General Algorithm
-!! @{
       subroutine mcica_subcol                                           &
      &    ( cldf, nlay, ipseed, dz, de_lgth, alpha,                     & !  ---  inputs
      &      lcloudy                                                     & !  ---  outputs
@@ -1896,6 +1876,7 @@
 !  other control flags from module variables:                           !
 !     iovr    : control flag for cloud overlapping method               !
 !                 =0:random; =1:maximum/random: =2:maximum; =3:decorr   !
+!                 =4:exponential; =5:exponential-random                 !
 !                                                                       !
 !  =====================    end of definitions    ====================  !
 
@@ -1912,9 +1893,10 @@
       logical, dimension(ngptlw,nlay), intent(out) :: lcloudy
 
 !  ---  locals:
-      real (kind=kind_phys) :: cdfunc(ngptlw,nlay), rand1d(ngptlw),     &
-     &       rand2d(nlay*ngptlw), tem1, fac_lcf(nlay),                  &
+      real (kind=kind_phys) :: cdfunc(ngptlw,nlay),                     &
+     &                            tem1, fac_lcf(nlay),                  &
      &       cdfun2(ngptlw,nlay)
+      real (kind=kind_dbl_prec) rand2d(nlay*ngptlw), rand1d(ngptlw)
 
       type (random_stat) :: stat          ! for thread safe random generator
 
@@ -2080,43 +2062,43 @@
 !
 !       NOTE: The code below is identical for case (4) and (5) because the 
 !       distinction in the vertical correlation between EXP and ER is already 
-!       built into the specification of alpha (in subroutine get_alpha_exp). 
+!       built into the specification of alpha (in subroutine get_alpha_exper). 
 
 !  ---  setup 2 sets of random numbers
 
-!          call random_number ( rand2d, stat )
+          call random_number ( rand2d, stat )
 
-!          k1 = 0
-!          do k = 1, nlay
-!            do n = 1, ngptlw
-!              k1 = k1 + 1
-!              cdfunc(n,k) = rand2d(k1)
-!            enddo
-!          enddo
+          k1 = 0
+          do k = 1, nlay
+            do n = 1, ngptlw
+              k1 = k1 + 1
+              cdfunc(n,k) = rand2d(k1)
+            enddo
+          enddo
 
-!          call random_number ( rand2d, stat )
+          call random_number ( rand2d, stat )
 
-!          k1 = 0
-!          do k = 1, nlay
-!            do n = 1, ngptlw
-!              k1 = k1 + 1
-!              cdfun2(n,k) = rand2d(k1)
-!            enddo
-!          enddo
+          k1 = 0
+          do k = 1, nlay
+            do n = 1, ngptlw
+              k1 = k1 + 1
+              cdfun2(n,k) = rand2d(k1)
+            enddo
+          enddo
 
 !  ---  then working upward from the surface:
 !       if a random number (from an independent set: cdfun2) is smaller than 
 !       alpha, then use the previous layer's number, otherwise use a new random
 !       number (keep the originally assigned one in cdfunc for that layer).
 
-!          do k = 2, nlay
-!            k1 = k - 1
-!            do n = 1, ngptlw
-!              if ( cdfun2(n,k) < alpha(k) ) then
-!                   cdfunc(n,k) = cdfunc(n,k1)
-!              endif
-!            enddo
-!          enddo
+          do k = 2, nlay
+            k1 = k - 1
+            do n = 1, ngptlw
+              if ( cdfun2(n,k) < alpha(k) ) then
+                   cdfunc(n,k) = cdfunc(n,k1)
+              endif
+            enddo
+          enddo
 
       end select
 
@@ -2133,7 +2115,6 @@
       return
 ! ..................................
       end subroutine mcica_subcol
-!! @}
 ! ----------------------------------
 
 !>\ingroup module_radlw_main
@@ -2177,7 +2158,6 @@
 !!\param scaleminor,scaleminorn2         scale factors for minor gases
 !!\param indminor        index of lower ref temp for minor gases
 !>\section setcoef_gen setcoef General Algorithm
-!> @{
       subroutine setcoef                                                &
      &     ( pavel,tavel,tz,stemp,h2ovmr,colamt,coldry,colbrd,          & !  ---  inputs:
      &       nlay, nlp1,                                                &
@@ -2434,7 +2414,6 @@
       return
 ! ..................................
       end subroutine setcoef
-!> @}
 ! ----------------------------------
 
 !>\ingroup module_radlw_main
@@ -2472,7 +2451,6 @@
 !!\param htrcl       clear sky heating rate (k/sec or k/day)
 !!\param htrb        spectral band lw heating rate (k/day)
 !>\section gen_rtrn rtrn General Algorithm
-!! @{
 ! ----------------------------------
       subroutine rtrn                                                   &
      &     ( semiss,delp,cldfrc,taucld,tautot,pklay,pklev,              & !  ---  inputs
@@ -2830,7 +2808,6 @@
 
 ! ..................................
       end subroutine rtrn
-!! @}
 ! ----------------------------------
 
 
@@ -2857,7 +2834,6 @@
 !!\param htrcl         clear sky heating rate (k/sec or k/day)
 !!\param htrb          spectral band lw heating rate (k/day)
 !!\section gen_rtrnmr rtrnmr General Algorithm
-!> @{
 ! ----------------------------------
       subroutine rtrnmr                                                 &
      &     ( semiss,delp,cldfrc,taucld,tautot,pklay,pklev,              &!  ---  inputs
@@ -3425,7 +3401,6 @@
 ! .................................
       end subroutine rtrnmr
 ! ---------------------------------
-!> @}
 
 !>\ingroup module_radlw_main
 !> \brief This subroutine computes the upward/downward radiative fluxes, and
@@ -3451,7 +3426,6 @@
 !!\param htrcl        clear sky heating rate (k/sec or k/day)
 !!\param htrb         spectral band lw heating rate (k/day)
 !!\section gen_rtrnmc rtrnmc General Algorithm
-!> @{
 ! ---------------------------------
       subroutine rtrnmc                                                 &
      &     ( semiss,delp,cldfmc,taucld,tautot,pklay,pklev,              & !  ---  inputs:
@@ -3820,7 +3794,6 @@
 ! ..................................
       end subroutine rtrnmc
 ! ----------------------------------
-!> @}
 
 !>\ingroup module_radlw_main
 !>\brief This subroutine contains optical depths developed for the rapid
@@ -3869,7 +3842,6 @@
 !!\param fracs            planck fractions
 !!\param tautot           total optical depth (gas+aerosols)
 !>\section taumol_gen taumol General Algorithm
-!! @{
 !! subprograms called:  taugb## (## = 01 -16) 
       subroutine taumol                                                 &
      &     ( laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,              & !  ---  inputs
@@ -6880,7 +6852,6 @@
 
 ! ..................................
       end subroutine taumol
-!! @}
 
 ! ------------------------------------------------------------------------------
       subroutine cldprmc(nlayers, inflag, iceflag, liqflag, cldfmc,     &
@@ -7789,7 +7760,7 @@
                                                                                                  
       end subroutine cldprmc                                                                     
                                                                     
-
+!> @}
 !........................................!$
       end module rrtmg_lw                !$
 !========================================!$

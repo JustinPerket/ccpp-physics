@@ -1,12 +1,14 @@
-!> \File drag_suite.F90
+!> \file drag_suite.F90
 !! This file is the  parameterization of orographic gravity wave
 !! drag, mountain blocking, and form drag.
 
-!> This module contains the CCPP-compliant orographic gravity wave dray scheme.
       module drag_suite
 
       contains
 
+!> \defgroup gfs_drag_suite_mod GSL drag_suite Module
+!> This module contains the CCPP-compliant GSL orographic gravity wave dray scheme.
+!> @{
       subroutine drag_suite_init(gwd_opt, errmsg, errflg)
 
       integer,          intent(in)  :: gwd_opt
@@ -27,9 +29,7 @@
       end if        
       end subroutine drag_suite_init
 
-! \defgroup GFS_ogwd GFS Orographic Gravity Wave Drag
-!> \defgroup gfs_drag_suite GFS drag_suite Main
-!! \brief This subroutine includes orographic gravity wave drag,  mountain
+!> \brief This subroutine includes orographic gravity wave drag,  mountain
 !! blocking, and form drag.
 !!
 !> The time tendencies of zonal and meridional wind are altered to
@@ -200,7 +200,6 @@
 !!  an independent process.  The next step is to test
 !!
 !> \section det_drag_suite GFS Orographic GWD Scheme Detailed Algorithm
-!> @{
    subroutine drag_suite_run(                                           &
      &           IM,KM,dvdt,dudt,dtdt,U1,V1,T1,Q1,KPBL,                 &
      &           PRSI,DEL,PRSL,PRSLK,PHII,PHIL,DELTIM,KDT,              &
@@ -218,7 +217,8 @@
      &           do_gsl_drag_ls_bl, do_gsl_drag_ss, do_gsl_drag_tofd,   &
      &           dtend, dtidx, index_of_process_orographic_gwd,         &
      &           index_of_temperature, index_of_x_wind,                 &
-     &           index_of_y_wind, ldiag3d, errmsg, errflg)
+     &           index_of_y_wind, ldiag3d,                              &
+     &           spp_wts_gwd, spp_gwd, errmsg, errflg)
 
 !   ********************************************************************
 ! ----->  I M P L E M E N T A T I O N    V E R S I O N   <----------
@@ -365,6 +365,11 @@
    real(kind=kind_phys), dimension(im,km)           ::     zl      ! = PHIL/g
 
 !SPP
+   real(kind=kind_phys), dimension(im) :: var_stoch, varss_stoch, &
+                                       varmax_ss_stoch, varmax_fd_stoch
+   real(kind=kind_phys), intent(in) :: spp_wts_gwd(:,:)
+   integer, intent(in) :: spp_gwd
+
    real(kind=kind_phys), dimension(im)              :: rstoch
 
 !Output:
@@ -525,7 +530,8 @@
 ! non-dim sub grid mtn drag Amp (*j*)
 !     cdmb = 1.0/float(IMX/192)
 !     cdmb = 192.0/float(IMX)
-      cdmb = 4.0 * 192.0/float(IMX)
+      ! New cdmbgwd addition for GSL blocking drag
+      cdmb = 1.0
       if (cdmbgwd(1) >= 0.0) cdmb = cdmb * cdmbgwd(1)
 
 !>-# Orographic Gravity Wave Drag Section
@@ -583,17 +589,25 @@ do i=1,im
    endif
 enddo
 
-do i=1,im
-   if ( dx(i) .ge. dxmax_ss ) then
-      ss_taper(i) = 1.
-   else
-      if ( dx(i) .le. dxmin_ss) then
-         ss_taper(i) = 0.
-      else
-         ss_taper(i) = dxmax_ss * (1. - dxmin_ss/dx(i))/(dxmax_ss-dxmin_ss)
-      endif
-   endif
-enddo
+! Remove ss_tapering
+ss_taper(:) = 1.
+
+! SPP, if spp_gwd is 0, no perturbations are applied.
+if ( spp_gwd==1 ) then
+  do i = its,im
+    var_stoch(i)   = var(i)   + var(i)*0.75*spp_wts_gwd(i,1)
+    varss_stoch(i) = varss(i) + varss(i)*0.75*spp_wts_gwd(i,1)
+    varmax_ss_stoch(i) = varmax_ss + varmax_ss*0.75*spp_wts_gwd(i,1)
+    varmax_fd_stoch(i) = varmax_fd + varmax_fd*0.75*spp_wts_gwd(i,1)
+  enddo
+else
+  do i = its,im
+    var_stoch(i)   = var(i)
+    varss_stoch(i) = varss(i)
+    varmax_ss_stoch(i) = varmax_ss
+    varmax_fd_stoch(i) = varmax_fd
+  enddo
+endif
 
 !--- calculate length of grid for flow-blocking drag
 !
@@ -711,7 +725,7 @@ enddo
 !  determine reference level: maximum of 2*var and pbl heights
 !
    do i = its,im
-     zlowtop(i) = 2. * var(i)
+     zlowtop(i) = 2. * var_stoch(i)
    enddo
 !
    do i = its,im
@@ -867,7 +881,7 @@ IF ( (do_gsl_drag_ls_bl).and.                            &
 !
          ldrag(i) = ldrag(i) .or. bnv2(i,1).le.0.0
          ldrag(i) = ldrag(i) .or. ulow(i).eq.1.0
-         ldrag(i) = ldrag(i) .or. var(i) .le. 0.0
+         ldrag(i) = ldrag(i) .or. var_stoch(i) .le. 0.0
 !
 !  set all ri low level values to the low level value
 !
@@ -877,7 +891,7 @@ IF ( (do_gsl_drag_ls_bl).and.                            &
 !
          if (.not.ldrag(i))   then
             bnv(i) = sqrt( bnv2(i,1) )
-            fr(i) = bnv(i)  * rulow(i) * 2. * var(i) * od(i)
+            fr(i) = bnv(i)  * rulow(i) * 2. * var_stoch(i) * od(i)
             fr(i) = min(fr(i),frmax)
             xn(i)  = ubar(i) * rulow(i)
             yn(i)  = vbar(i) * rulow(i)
@@ -961,15 +975,13 @@ IF ( do_gsl_drag_ss ) THEN
                exit
             ENDIF
          enddo
-         if((xland(i)-1.5).le.0. .and. 2.*varss(i).le.hpbl(i))then
+         if((xland(i)-1.5).le.0. .and. 2.*varss_stoch(i).le.hpbl(i))then
             if(br1(i).gt.0. .and. thvx(i,kpbl2)-thvx(i,kts) > 0.)then
-              cleff_ss    = sqrt(dxy(i)**2 + dxyp(i)**2)   ! WRF
+              ! Modify xlinv to represent wave number of "typical" small-scale topography 
 !              cleff_ss    = 3. * max(dx(i),cleff_ss)
 !              cleff_ss    = 10. * max(dxmax_ss,cleff_ss)
-              cleff_ss    = 0.1 * max(dxmax_ss,cleff_ss)  ! WRF
 !               cleff_ss    = 0.1 * 12000.
-              coefm_ss(i) = (1. + olss(i)) ** (oass(i)+1.)
-              xlinv(i) = coefm_ss(i) / cleff_ss
+              xlinv(i) = 0.001*pi   ! 2km horizontal wavelength
               !govrth(i)=g/(0.5*(thvx(i,kpbl(i))+thvx(i,kts)))
               govrth(i)=g/(0.5*(thvx(i,kpbl2)+thvx(i,kts)))
               !XNBV=sqrt(govrth(i)*(thvx(i,kpbl(i))-thvx(i,kts))/hpbl(i))
@@ -980,8 +992,8 @@ IF ( do_gsl_drag_ss ) THEN
                 !tauwavex0=0.5*XNBV*xlinv(i)*(2*MIN(varss(i),75.))**2*ro(i,kts)*u1(i,kpbl(i))
                 !tauwavex0=0.5*XNBV*xlinv(i)*(2.*MIN(varss(i),40.))**2*ro(i,kts)*u1(i,kpbl2)
                 !tauwavex0=0.5*XNBV*xlinv(i)*(2.*MIN(varss(i),40.))**2*ro(i,kts)*u1(i,3)
-                var_temp = MIN(varss(i),varmax_ss) +                       &
-                              MAX(0.,beta_ss*(varss(i)-varmax_ss))
+                ! Remove limit on varss_stoch
+                var_temp = varss_stoch(i)
                 ! Note:  This is a semi-implicit treatment of the time differencing
                 var_temp2 = 0.5*XNBV*xlinv(i)*(2.*var_temp)**2*ro(i,kvar)  ! this is greater than zero
                 tauwavex0=var_temp2*u1(i,kvar)/(1.+var_temp2*deltim)
@@ -995,8 +1007,8 @@ IF ( do_gsl_drag_ss ) THEN
                 !tauwavey0=0.5*XNBV*xlinv(i)*(2*MIN(varss(i),75.))**2*ro(i,kts)*v1(i,kpbl(i))
                 !tauwavey0=0.5*XNBV*xlinv(i)*(2.*MIN(varss(i),40.))**2*ro(i,kts)*v1(i,kpbl2)
                 !tauwavey0=0.5*XNBV*xlinv(i)*(2.*MIN(varss(i),40.))**2*ro(i,kts)*v1(i,3)
-                var_temp = MIN(varss(i),varmax_ss) +                       &
-                              MAX(0.,beta_ss*(varss(i)-varmax_ss))
+                ! Remove limit on varss_stoch
+                var_temp = varss_stoch(i)
                 ! Note:  This is a semi-implicit treatment of the time differencing
                 var_temp2 = 0.5*XNBV*xlinv(i)*(2.*var_temp)**2*ro(i,kvar)  ! this is greater than zero
                 tauwavey0=var_temp2*v1(i,kvar)/(1.+var_temp2*deltim)
@@ -1060,17 +1072,16 @@ IF ( do_gsl_drag_tofd ) THEN
 
          IF ((xland(i)-1.5) .le. 0.) then
             !(IH*kflt**n1)**-1 = (0.00102*0.00035**-1.9)**-1 = 0.00026615161
-            var_temp = MIN(varss(i),varmax_fd) +                           &
-                       MAX(0.,beta_fd*(varss(i)-varmax_fd))
-            var_temp = MIN(var_temp, 250.)
+            ! Remove limit on varss_stoch
+            var_temp = varss_stoch(i)
+            !var_temp = MIN(var_temp, 250.)
             a1=0.00026615161*var_temp**2
 !           a1=0.00026615161*MIN(varss(i),varmax)**2
 !           a1=0.00026615161*(0.5*varss(i))**2
            ! k1**(n1-n2) = 0.003**(-1.9 - -2.8) = 0.003**0.9 = 0.005363
             a2=a1*0.005363
-           ! Revise e-folding height based on PBL height and topographic std. dev. -- M. Toy 3/12/2018
-            H_efold = max(2*varss(i),hpbl(i))
-            H_efold = min(H_efold,1500.)
+            ! Beljaars H_efold
+            H_efold = 1500.
             DO k=kts,km
                wsp=SQRT(u1(i,k)**2 + v1(i,k)**2)
                ! alpha*beta*Cmd*Ccorr*2.109 = 12.*1.*0.005*0.6*2.109 = 0.0759
@@ -1214,7 +1225,8 @@ IF ( (do_gsl_drag_ls_bl) .and. (gwd_opt_bl .EQ. 1) ) THEN
 !--------- compute flow-blocking stress
 !
                cd = max(2.0-1.0/od(i),0.0)
-               taufb(i,kts) = 0.5 * roll(i) * coefm(i) /                   &
+               ! New cdmbgwd addition for GSL blocking drag
+               taufb(i,kts) = cdmb * 0.5 * roll(i) * coefm(i) /            &
                                  max(dxmax_ls,dxy(i))**2 * cd * dxyp(i) *  &
                                  olp(i) * zblk * ulow(i)**2
                tautem = taufb(i,kts)/float(kblk-kts)
@@ -1352,7 +1364,6 @@ endif
    end subroutine drag_suite_run
 !-------------------------------------------------------------------
 !
-      subroutine drag_suite_finalize()
-      end subroutine drag_suite_finalize
+!> @}
 
       end module drag_suite

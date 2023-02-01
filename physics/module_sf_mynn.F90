@@ -3,7 +3,6 @@
 !WRF:MODEL_LAYER:PHYSICS
 !
 !>\ingroup mynn_sfc
-!>\defgroup module_sf_mynn_mod GSD MYNN SFC Module
 MODULE module_sf_mynn
 
 !-------------------------------------------------------------------
@@ -111,10 +110,6 @@ MODULE module_sf_mynn
   INTEGER, PARAMETER :: debug_code = 0  !0: no extra ouput
                                         !1: check input
                                         !2: everything - heavy I/O
-  LOGICAL, PARAMETER :: compute_diag = .false.
-  LOGICAL, PARAMETER :: compute_flux = .false.  !shouldn't need compute 
-               ! these in FV3. They will be written over anyway.
-               ! Computing the fluxes here is leftover from the WRF world.
 
   REAL,   DIMENSION(0:1000 ),SAVE :: psim_stab,psim_unstab, &
                                      psih_stab,psih_unstab
@@ -132,10 +127,11 @@ CONTAINS
               CP,G,ROVCP,R,XLV,                      & !in
               SVP1,SVP2,SVP3,SVPT0,EP1,EP2,KARMAN,   & !in
               ISFFLX,isftcflx,lsm,lsm_ruc,           & !in
+              compute_flux,compute_diag,             & !in
               iz0tlnd,psi_opt,                       & !in
-     &        sigmaf,vegtype,shdmax,ivegsrc,         & !intent(in)
-     &        z0pert,ztpert,                         & !intent(in)
-     &        redrag,sfc_z0_type,                    & !intent(in)
+              sigmaf,vegtype,shdmax,ivegsrc,         & !intent(in)
+              z0pert,ztpert,                         & !intent(in)
+              redrag,sfc_z0_type,                    & !intent(in)
               itimestep,iter,flag_iter,              & !in
                     wet,       dry,       icy,       & !intent(in)
               tskin_wat, tskin_lnd, tskin_ice,       & !intent(in)
@@ -161,10 +157,11 @@ CONTAINS
               QGH,QSFC,                              &
               U10,V10,TH2,T2,Q2,                     &
               GZ1OZ0,WSPD,WSTAR,                     &
-              spp_pbl,pattern_spp_pbl,               &
+              spp_sfc,pattern_spp_sfc,               &
               ids,ide, jds,jde, kds,kde,             &
               ims,ime, jms,jme, kms,kme,             &
-              its,ite, jts,jte, kts,kte              )
+              its,ite, jts,jte, kts,kte,             &
+              errmsg, errflg                         )
 !-------------------------------------------------------------------
       IMPLICIT NONE
 !-------------------------------------------------------------------
@@ -258,6 +255,8 @@ CONTAINS
 !-- jte         end index for j in tile
 !-- kts         start index for k in tile
 !-- kte         end index for k in tile
+!-- errmsg      CCPP error message
+!-- errflg      CCPP error code
 !=================================================================
 ! SCALARS
 !===================================
@@ -270,8 +269,9 @@ CONTAINS
       REAL,     INTENT(IN)   ::        CP,G,ROVCP,R,XLV !,DX
 !NAMELIST/CONFIGURATION OPTIONS:
       INTEGER,  INTENT(IN)   ::        ISFFLX, LSM, LSM_RUC
-      INTEGER,  OPTIONAL,  INTENT(IN)   :: ISFTCFLX, IZ0TLND
-      INTEGER,  OPTIONAL,  INTENT(IN)   :: spp_pbl, psi_opt
+      INTEGER,  OPTIONAL, INTENT(IN) :: ISFTCFLX, IZ0TLND
+      INTEGER,  OPTIONAL, INTENT(IN) :: spp_sfc, psi_opt
+      logical,  intent(in)   ::        compute_flux,compute_diag
       integer, intent(in) :: ivegsrc
       integer, intent(in) :: sfc_z0_type ! option for calculating surface roughness length over ocean
       logical, intent(in) :: redrag ! reduced drag coeff. flag for high wind over sea (j.han)
@@ -292,8 +292,9 @@ CONTAINS
                                                           U3D,V3D, &
                                                         th3d,pi3d
 
-      REAL, DIMENSION( ims:ime, kms:kme), OPTIONAL,                &
-                INTENT(IN) ::                      pattern_spp_pbl
+      !GJF: This array must be assumed-shape since it is conditionally-allocated
+      REAL, DIMENSION( :,: ),                                      &
+                INTENT(IN) ::                      pattern_spp_sfc
 !===================================
 ! 2D VARIABLES
 !===================================
@@ -352,9 +353,13 @@ CONTAINS
      &                     QFLX_wat,  QFLX_lnd,  QFLX_ice,         &
      &                     qsfc_wat,  qsfc_lnd,  qsfc_ice
 
+! CCPP error handling
+      character(len=*), intent(inout) :: errmsg
+      integer,          intent(inout) :: errflg
+
 !ADDITIONAL OUTPUT
 !JOE-begin
-      REAL,     DIMENSION( ims:ime )    ::   qstar
+      REAL,     DIMENSION( ims:ime ) :: qstar
 !JOE-end
 !===================================
 ! 1D LOCAL ARRAYS
@@ -396,11 +401,12 @@ CONTAINS
          QC1D(i)=QC3D(i,kts)
          P1D(i) =P3D(i,kts)
          T1D(i) =T3D(i,kts)
-         if (spp_pbl==1) then
-            rstoch1D(i)=pattern_spp_pbl(i,kts)
+         if (spp_sfc==1) then
+            rstoch1D(i)=pattern_spp_sfc(i,kts)
          else
             rstoch1D(i)=0.0
          endif
+         qstar(i)=0.0
       ENDDO
 
       IF (itimestep==1 .AND. iter==1) THEN
@@ -410,9 +416,6 @@ CONTAINS
             UST_LND(i)=MAX(0.04*SQRT(U1D(i)*U1D(i) + V1D(i)*V1D(i)),0.001)
             UST_ICE(i)=MAX(0.04*SQRT(U1D(i)*U1D(i) + V1D(i)*V1D(i)),0.001)
             MOL(i)=0.0
-            qstar(i)=0.0
-            QFX(i)=0.
-            HFX(i)=0.
             QFLX(i)=0.
             HFLX(i)=0.
             if ( LSM == LSM_RUC ) then
@@ -435,6 +438,7 @@ CONTAINS
            CP,G,ROVCP,R,XLV,SVP1,SVP2,SVP3,SVPT0,               &
            EP1,EP2,KARMAN,                                      &
            ISFFLX,isftcflx,iz0tlnd,psi_opt,                     &
+           compute_flux,compute_diag,                           &
            sigmaf,vegtype,shdmax,ivegsrc,                       &  !intent(in)
            z0pert,ztpert,                                       &  !intent(in)
            redrag,sfc_z0_type,                                  &  !intent(in)
@@ -461,12 +465,12 @@ CONTAINS
            PSIM,PSIH,                                           &
            HFLX,HFX,QFLX,QFX,LH,FLHC,FLQC,                      &
            QGH,QSFC,U10,V10,TH2,T2,Q2,                          &
-           GZ1OZ0,WSPD,wstar,                                   &
-           spp_pbl,rstoch1D,                                    &
+           GZ1OZ0,WSPD,wstar,qstar,                             &
+           spp_sfc,rstoch1D,                                    &
            ids,ide, jds,jde, kds,kde,                           &
            ims,ime, jms,jme, kms,kme,                           &
-           its,ite, jts,jte, kts,kte                            &
-                                                                )
+           its,ite, jts,jte, kts,kte,                           &
+           errmsg, errflg                                       )
 
     END SUBROUTINE SFCLAY_MYNN
 
@@ -482,6 +486,7 @@ CONTAINS
              CP,G,ROVCP,R,XLV,SVP1,SVP2,SVP3,SVPT0,               &
              EP1,EP2,KARMAN,                                      &
              ISFFLX,isftcflx,iz0tlnd,psi_opt,                     &
+             compute_flux,compute_diag,                           &
              sigmaf,vegtype,shdmax,ivegsrc,                       &  !intent(in)
              z0pert,ztpert,                                       &  !intent(in)
              redrag,sfc_z0_type,                                  &  !intent(in)
@@ -509,12 +514,12 @@ CONTAINS
              HFLX,HFX,QFLX,QFX,LH,FLHC,FLQC,                      &
              QGH,QSFC,                                            &
              U10,V10,TH2,T2,Q2,                                   &
-             GZ1OZ0,WSPD,wstar,                                   &
-             spp_pbl,rstoch1D,                                    &
+             GZ1OZ0,WSPD,wstar,qstar,                             &
+             spp_sfc,rstoch1D,                                    &
              ids,ide, jds,jde, kds,kde,                           &
              ims,ime, jms,jme, kms,kme,                           &
-             its,ite, jts,jte, kts,kte                            &
-                                                                  )
+             its,ite, jts,jte, kts,kte,                           &
+             errmsg, errflg                                       )
 
 !-------------------------------------------------------------------
       IMPLICIT NONE
@@ -537,7 +542,8 @@ CONTAINS
 !-----------------------------
       INTEGER,  INTENT(IN) :: ISFFLX
       INTEGER,  OPTIONAL,  INTENT(IN )   ::     ISFTCFLX, IZ0TLND
-      INTEGER,    INTENT(IN)             ::     spp_pbl, psi_opt
+      logical, intent(in)                :: compute_flux,compute_diag
+      INTEGER,    INTENT(IN)             ::     spp_sfc, psi_opt
       integer, intent(in) :: ivegsrc
       integer, intent(in) :: sfc_z0_type ! option for calculating surface roughness length over ocean
       logical, intent(in) :: redrag ! reduced drag coeff. flag for high wind over sea (j.han)
@@ -563,9 +569,10 @@ CONTAINS
                                                            dz8w1d, &
                                                            dz2w1d
 
-      REAL,     DIMENSION( ims:ime ), INTENT(INOUT) ::   HFLX,HFX, &
-                                                      QFLX,QFX,LH, &
-                                                         MOL,RMOL, &
+      REAL,     DIMENSION( ims:ime ), INTENT(OUT)   ::    QFX,HFX, &
+                                                             RMOL
+      REAL,     DIMENSION( ims:ime ), INTENT(INOUT) ::  HFLX,QFLX, &
+                                                           LH,MOL, &
                                                          QGH,QSFC, &
                                                               ZNT, &
                                                               ZOL, &
@@ -610,8 +617,13 @@ CONTAINS
 
 !--------------------------------------------
 !JOE-additinal output
-      REAL,     DIMENSION( ims:ime ) ::                wstar,qstar
+      REAL,     DIMENSION( ims:ime ), INTENT(OUT)   :: wstar,qstar
 !JOE-end
+
+! CCPP error handling
+      character(len=*), intent(inout) :: errmsg
+      integer,          intent(inout) :: errflg
+
 !----------------------------------------------------------------
 ! LOCAL VARS
 !----------------------------------------------------------------
@@ -661,8 +673,8 @@ CONTAINS
 !-------------------------------------------------------------------
       DO I=its,ite
 
-        ! PSFC ( in cmb) is used later in saturation checks
-        PSFC(I)=PSFCPA(I)/1000.
+         ! PSFC ( in cmb) is used later in saturation checks
+         PSFC(I)=PSFCPA(I)/1000.
          !tgs - do computations if flag_iter(i) = .true.
          if ( flag_iter(i) ) then
 
@@ -835,8 +847,8 @@ CONTAINS
 
       DO I=its,ite
          ! CONVERT LOWEST LAYER TEMPERATURE TO POTENTIAL TEMPERATURE:     
-         TH1D(I)=T1D(I)*THCON(I)                !(Theta, K)
-         TC1D(I)=T1D(I)-273.15                  !(T, Celsius)    
+         TH1D(I)=T1D(I)*(100000./P1D(I))**ROVCP  !(Theta, K)
+         TC1D(I)=T1D(I)-273.15                   !(T, Celsius)
       ENDDO
 
       DO I=its,ite
@@ -846,7 +858,7 @@ CONTAINS
       ENDDO
 
       DO I=its,ite
-         RHO1D(I)=PSFCPA(I)/(R*TV1D(I))  !now using value calculated in sfc driver
+         RHO1D(I)=P1D(I)/(R*TV1D(I))     !now using value calculated in sfc driver
          ZA(I)=0.5*dz8w1d(I)             !height of first half-sigma level 
          ZA2(I)=dz8w1d(I) + 0.5*dz2w1d(I)    !height of 2nd half-sigma level
          GOVRTH(I)=G/TH1D(I)
@@ -909,7 +921,7 @@ CONTAINS
       DO I=its,ite
         if( flag_iter(i) ) then
          ! DH* 20200401 - note. A weird bug in Intel 18 on hera prevents using the
-         ! normal -O2 optimization in REPRO and PROD mode for this file. Not reproducible
+         ! normal -O2 optimization in Release mode for this file. Not reproducible
          ! by every user, the bug manifests itself in the resulting wind speed WSPD(I)
          ! being -99.0 despite the assignments in lines 932 and 933. *DH
          WSPD(I)=SQRT(U1D(I)*U1D(I)+V1D(I)*V1D(I))
@@ -1111,7 +1123,7 @@ CONTAINS
        endif !-end wave model check
 
        ! add stochastic perturbation of ZNT
-       if (spp_pbl==1) then
+       if (spp_sfc==1) then
           ZNTstoch_wat(I)  = MAX(ZNT_wat(I) + ZNT_wat(I)*1.0*rstoch1D(i), 1e-6)
        else
           ZNTstoch_wat(I)  = ZNT_wat(I)
@@ -1140,29 +1152,29 @@ CONTAINS
           IF ( ISFTCFLX .EQ. 0 ) THEN
              IF (COARE_OPT .EQ. 3.0) THEN
                 CALL fairall_etal_2003(ZT_wat(i),ZQ_wat(i),restar,UST_wat(i),visc,&
-                                       rstoch1D(i),spp_pbl)
+                                       rstoch1D(i),spp_sfc)
              ELSE
                 !presumably, this will be published soon, but hasn't yet
                 CALL fairall_etal_2014(ZT_wat(i),ZQ_wat(i),restar,UST_wat(i),visc,&
-                                       rstoch1D(i),spp_pbl)
+                                       rstoch1D(i),spp_sfc)
              ENDIF
           ELSEIF ( ISFTCFLX .EQ. 1 ) THEN
              IF (COARE_OPT .EQ. 3.0) THEN
                 CALL fairall_etal_2003(ZT_wat(i),ZQ_wat(i),restar,UST_wat(i),visc,&
-                                       rstoch1D(i),spp_pbl)
+                                       rstoch1D(i),spp_sfc)
              ELSE
                 CALL fairall_etal_2014(ZT_wat(i),ZQ_wat(i),restar,UST_wat(i),visc,&
-                                       rstoch1D(i),spp_pbl)
+                                       rstoch1D(i),spp_sfc)
              ENDIF
           ELSEIF ( ISFTCFLX .EQ. 2 ) THEN
              CALL garratt_1992(ZT_wat(i),ZQ_wat(i),ZNTstoch_wat(i),restar,2.0)
           ELSEIF ( ISFTCFLX .EQ. 3 ) THEN
              IF (COARE_OPT .EQ. 3.0) THEN
                 CALL fairall_etal_2003(ZT_wat(i),ZQ_wat(i),restar,UST_wat(i),visc,&
-                                       rstoch1D(i),spp_pbl)
+                                       rstoch1D(i),spp_sfc)
              ELSE
                 CALL fairall_etal_2014(ZT_wat(i),ZQ_wat(i),restar,UST_wat(i),visc,&
-                                       rstoch1D(i),spp_pbl)
+                                       rstoch1D(i),spp_sfc)
              ENDIF
           ELSEIF ( ISFTCFLX .EQ. 4 ) THEN
              !GFS zt formulation
@@ -1173,10 +1185,10 @@ CONTAINS
           !DEFAULT TO COARE 3.0/3.5
           IF (COARE_OPT .EQ. 3.0) THEN
              CALL fairall_etal_2003(ZT_wat(i),ZQ_wat(i),restar,UST_wat(i),visc,&
-                                    rstoch1D(i),spp_pbl)
+                                    rstoch1D(i),spp_sfc)
           ELSE
              CALL fairall_etal_2014(ZT_wat(i),ZQ_wat(i),restar,UST_wat(i),visc,&
-                                    rstoch1D(i),spp_pbl)
+                                    rstoch1D(i),spp_sfc)
           ENDIF
        ENDIF
        IF (debug_code > 1) THEN
@@ -1201,7 +1213,7 @@ CONTAINS
        endif
 
        ! add stochastic perturbaction of ZNT
-       if (spp_pbl==1) then
+       if (spp_sfc==1) then
           ZNTstoch_lnd(I)  = MAX(ZNT_lnd(I) + ZNT_lnd(I)*1.0*rstoch1D(i), 1e-6)
        else
           ZNTstoch_lnd(I)  = ZNT_lnd(I)
@@ -1222,8 +1234,13 @@ CONTAINS
           IF ( PRESENT(IZ0TLND) ) THEN
              IF ( IZ0TLND .LE. 1 ) THEN
                 CALL zilitinkevich_1995(ZNTstoch_lnd(i),ZT_lnd(i),ZQ_lnd(i),restar,&
-                      UST_lnd(I),KARMAN,1.0,IZ0TLND,spp_pbl,rstoch1D(i))
+                      UST_lnd(I),KARMAN,1.0,IZ0TLND,spp_sfc,rstoch1D(i))
              ELSEIF ( IZ0TLND .EQ. 2 ) THEN
+                ! DH note - at this point, qstar is either not initialized
+                ! or initialized to zero, but certainly not set correctly
+                errmsg = 'Logic error: qstar is not set correctly when calling Yang_2008'
+                errflg = 1
+                return
                 CALL Yang_2008(ZNTSTOCH_lnd(i),ZT_lnd(i),ZQ_lnd(i),UST_lnd(i),MOL(I),&
                               qstar(I),restar,visc)
              ELSEIF ( IZ0TLND .EQ. 3 ) THEN
@@ -1237,7 +1254,7 @@ CONTAINS
           ELSE
              !DEFAULT TO ZILITINKEVICH
              CALL zilitinkevich_1995(ZNTSTOCH_lnd(i),ZT_lnd(i),ZQ_lnd(i),restar,&
-                         UST_lnd(I),KARMAN,1.0,0,spp_pbl,rstoch1D(i))
+                         UST_lnd(I),KARMAN,1.0,0,spp_sfc,rstoch1D(i))
           ENDIF
        ENDIF
        IF (ZNTstoch_lnd(i) < 1E-8 .OR. Zt_lnd(i) < 1E-10) THEN 
@@ -1263,7 +1280,7 @@ CONTAINS
     IF (icy(I)) THEN
 
        ! add stochastic perturbaction of ZNT
-       if (spp_pbl==1) then
+       if (spp_sfc==1) then
           ZNTstoch_ice(I)  = MAX(ZNT_ice(I) + ZNT_ice(I)*1.0*rstoch1D(i), 1e-6)
        else
           ZNTstoch_ice(I)  = ZNT_ice(I)
@@ -1706,9 +1723,9 @@ CONTAINS
     IF (wet(I)) THEN
        ! TO PREVENT OSCILLATIONS AVERAGE WITH OLD VALUE 
        OLDUST = UST_wat(I)
-       UST_wat(I)=0.5*UST_wat(I)+0.5*KARMAN*WSPD(I)/PSIX_wat(I)
+       !UST_wat(I)=0.5*UST_wat(I)+0.5*KARMAN*WSPD(I)/PSIX_wat(I)
        !NON-AVERAGED: 
-       !UST_wat(I)=KARMAN*WSPD(I)/PSIX_wat(I)
+       UST_wat(I)=KARMAN*WSPD(I)/PSIX_wat(I)
        stress_wat(i)=ust_wat(i)**2
 
        ! Compute u* without vconv for use in HFX calc when isftcflx > 0           
@@ -1873,7 +1890,8 @@ CONTAINS
             !----------------------------------
             ! COMPUTE SURFACE HEAT FLUX:
             !----------------------------------
-            HFX(I)=FLHC(I)*(THSK_lnd(I)-TH1D(I))
+            !HFX(I)=FLHC(I)*(THSK_lnd(I)-TH1D(I))
+            HFX(I)=RHO1D(I)*CPM(I)*KARMAN*WSPD(i)/PSIX_lnd(I)*KARMAN/PSIT_lnd(I)*(THSK_lnd(I)-TH1D(i))
             HFX(I)=MAX(HFX(I),-250.)
             ! BWG, 2020-06-17: Mod next 2 lines for fractional
             HFLX_lnd(I)=HFX(I)/(RHO1D(I)*cpm(I))
@@ -1917,7 +1935,8 @@ CONTAINS
             !----------------------------------
             ! COMPUTE SURFACE HEAT FLUX:       
             !----------------------------------
-            HFX(I)=FLHC(I)*(THSK_wat(I)-TH1D(I))
+            !HFX(I)=FLHC(I)*(THSK_wat(I)-TH1D(I))
+            HFX(I)=RHO1D(I)*CPM(I)*KARMAN*WSPD(i)/PSIX_wat(I)*KARMAN/PSIT_wat(I)*(THSK_wat(I)-TH1D(i))
             IF ( PRESENT(ISFTCFLX) ) THEN
                IF ( ISFTCFLX.NE.0 ) THEN
                   ! AHW: add dissipative heating term
@@ -1964,7 +1983,8 @@ CONTAINS
             !----------------------------------
             ! COMPUTE SURFACE HEAT FLUX:
             !----------------------------------
-            HFX(I)=FLHC(I)*(THSK_ice(I)-TH1D(I))
+            !HFX(I)=FLHC(I)*(THSK_ice(I)-TH1D(I))
+            HFX(I)=RHO1D(I)*CPM(I)*KARMAN*WSPD(i)/PSIX_ice(I)*KARMAN/PSIT_ice(I)*(THSK_ice(I)-TH1D(i))
             HFX(I)=MAX(HFX(I),-250.)
             ! BWG, 2020-06-17: Mod next 2 lines for fractional
             HFLX_ice(I)=HFX(I)/(RHO1D(I)*cpm(I))
@@ -2246,7 +2266,7 @@ END SUBROUTINE SFCLAY1D_mynn
 !!            to work with the Noah LSM and may be specific for that
 !!            LSM only. Tests with RUC LSM showed no improvements. 
   SUBROUTINE zilitinkevich_1995(Z_0,Zt,Zq,restar,ustar,KARMAN,&
-        & landsea,IZ0TLND2,spp_pbl,rstoch)
+        & landsea,IZ0TLND2,spp_sfc,rstoch)
 
        IMPLICIT NONE
        REAL, INTENT(IN) :: Z_0,restar,ustar,KARMAN,landsea
@@ -2255,7 +2275,7 @@ END SUBROUTINE SFCLAY1D_mynn
        REAL :: CZIL  !=0.100 in Chen et al. (1997)
                      !=0.075 in Zilitinkevich (1995)
                      !=0.500 in Lemone et al. (2008)
-       INTEGER,  INTENT(IN)  ::    spp_pbl
+       INTEGER,  INTENT(IN)  ::    spp_sfc
        REAL,     INTENT(IN)  ::    rstoch
 
 
@@ -2296,7 +2316,7 @@ END SUBROUTINE SFCLAY1D_mynn
 
 ! stochastically perturb thermal and moisture roughness length.
 ! currently set to half the amplitude: 
-          if (spp_pbl==1) then
+          if (spp_sfc==1) then
              Zt = Zt + Zt * 0.5 * rstoch
              Zt = MAX(Zt, 0.0001)
              Zq = Zt
@@ -2401,7 +2421,7 @@ END SUBROUTINE SFCLAY1D_mynn
        REAL, INTENT(IN)  :: ustar, visc, wsp10, zu
        REAL, INTENT(OUT) :: Z_0
        REAL, PARAMETER   :: G=9.81
-       REAL, PARAMETER   :: m=0.017, b=-0.005
+       REAL, PARAMETER   :: m=0.0017, b=-0.005
        REAL              :: CZC    ! variable charnock "constant"
        REAL              :: wsp10m ! logarithmically calculated 10 m
 
@@ -2461,11 +2481,11 @@ END SUBROUTINE SFCLAY1D_mynn
 !!(1992, p. 102), is available for flows with Ren < 2.
 !!
 !!This is for use over water only.
-    SUBROUTINE fairall_etal_2003(Zt,Zq,Ren,ustar,visc,rstoch,spp_pbl)
+    SUBROUTINE fairall_etal_2003(Zt,Zq,Ren,ustar,visc,rstoch,spp_sfc)
 
        IMPLICIT NONE
        REAL, INTENT(IN)   :: Ren,ustar,visc,rstoch
-       INTEGER, INTENT(IN):: spp_pbl
+       INTEGER, INTENT(IN):: spp_sfc
        REAL, INTENT(OUT)  :: Zt,Zq
 
        IF (Ren .le. 2.) then
@@ -2484,7 +2504,7 @@ END SUBROUTINE SFCLAY1D_mynn
 
        ENDIF
 
-       if (spp_pbl==1) then
+       if (spp_sfc==1) then
           Zt = Zt + Zt * 0.5 * rstoch
           Zq = Zt
        endif
@@ -2505,18 +2525,18 @@ END SUBROUTINE SFCLAY1D_mynn
 !! COARE 3.5/4.0 formulation, empirically derived from COARE and HEXMAX data
 !! [Fairall et al. (2014? coming soon, not yet published as of July 2014)].
 !! This is for use over water only.
-    SUBROUTINE fairall_etal_2014(Zt,Zq,Ren,ustar,visc,rstoch,spp_pbl)
+    SUBROUTINE fairall_etal_2014(Zt,Zq,Ren,ustar,visc,rstoch,spp_sfc)
 
        IMPLICIT NONE
        REAL, INTENT(IN)  :: Ren,ustar,visc,rstoch
-       INTEGER, INTENT(IN):: spp_pbl
+       INTEGER, INTENT(IN):: spp_sfc
        REAL, INTENT(OUT) :: Zt,Zq
 
        !Zt = (5.5e-5)*(Ren**(-0.60))
        Zt = MIN(1.6E-4, 5.8E-5/(Ren**0.72))
        Zq = Zt
 
-       IF (spp_pbl ==1) THEN
+       IF (spp_sfc ==1) THEN
           Zt = MAX(Zt + Zt*0.5*rstoch,2.0e-9)
           Zq = MAX(Zt + Zt*0.5*rstoch,2.0e-9)
        ELSE
@@ -2821,14 +2841,15 @@ END SUBROUTINE SFCLAY1D_mynn
       END SUBROUTINE znot_m_v6
 !--------------------------------------------------------------------
 !>\ingroup mynn_sfc
+!!
       SUBROUTINE znot_t_v6(uref, znott)
 
       IMPLICIT NONE
-! Calculate scalar roughness over water with input 10-m wind
-! For low-to-moderate winds, try to match the Ck-U10 relationship from COARE algorithm
-! For high winds, try to retain the Ck-U10 relationship of FY2015 HWRF
-!                                                  
-! Bin Liu, NOAA/NCEP/EMC 2017                      
+!> Calculate scalar roughness over water with input 10-m wind
+!! For low-to-moderate winds, try to match the Ck-U10 relationship from COARE algorithm
+!! For high winds, try to retain the Ck-U10 relationship of FY2015 HWRF
+!!                                                  
+!!\author Bin Liu, NOAA/NCEP/EMC 2017                      
 !                                                  
 ! uref(m/s)   :   wind speed at 10-m height        
 ! znott(meter):   scalar roughness scale over water
@@ -2886,15 +2907,16 @@ END SUBROUTINE SFCLAY1D_mynn
 
 !-------------------------------------------------------------------
 !>\ingroup mynn_sfc
+!!
       SUBROUTINE znot_m_v7(uref, znotm)
 
       IMPLICIT NONE
-! Calculate areodynamical roughness over water with input 10-m wind
-! For low-to-moderate winds, try to match the Cd-U10 relationship from COARE V3.5 (Edson et al. 2013)
-! For high winds, try to fit available observational data
-! Comparing to znot_t_v6, slightly decrease Cd for higher wind speed
-!                                          
-! Bin Liu, NOAA/NCEP/EMC 2018              
+!> Calculate areodynamical roughness over water with input 10-m wind
+!! For low-to-moderate winds, try to match the Cd-U10 relationship from COARE V3.5 (Edson et al. 2013)
+!! For high winds, try to fit available observational data
+!! Comparing to znot_t_v6, slightly decrease Cd for higher wind speed
+!!                                          
+!!\author Bin Liu, NOAA/NCEP/EMC 2018              
 !                                          
 ! uref(m/s)   :   wind speed at 10-m height
 ! znotm(meter):   areodynamical roughness scale over water
@@ -2934,15 +2956,16 @@ END SUBROUTINE SFCLAY1D_mynn
       END SUBROUTINE znot_m_v7
 !--------------------------------------------------------------------
 !>\ingroup mynn_sfc
+!!
       SUBROUTINE znot_t_v7(uref, znott)
 
       IMPLICIT NONE
-! Calculate scalar roughness over water with input 10-m wind
-! For low-to-moderate winds, try to match the Ck-U10 relationship from COARE algorithm
-! For high winds, try to retain the Ck-U10 relationship of FY2015 HWRF 
-! To be compatible with the slightly decreased Cd for higher wind speed
-!                            
-! Bin Liu, NOAA/NCEP/EMC 2018
+!> Calculate scalar roughness over water with input 10-m wind
+!! For low-to-moderate winds, try to match the Ck-U10 relationship from COARE algorithm
+!! For high winds, try to retain the Ck-U10 relationship of FY2015 HWRF 
+!! To be compatible with the slightly decreased Cd for higher wind speed
+!!                            
+!!\author Bin Liu, NOAA/NCEP/EMC 2018
 !
 ! uref(m/s)   :   wind speed at 10-m height        
 ! znott(meter):   scalar roughness scale over water
@@ -3333,13 +3356,14 @@ END SUBROUTINE SFCLAY1D_mynn
 
     END SUBROUTINE Li_etal_2010
 !-------------------------------------------------------------------
+!>\ingroup mynn_sfc
       REAL function zolri(ri,za,z0,zt,zol1,psi_opt)
 
-      ! This iterative algorithm was taken from the revised surface layer 
-      ! scheme in WRF-ARW, written by Pedro Jimenez and Jimy Dudhia and 
-      ! summarized in Jimenez et al. (2012, MWR). This function was adapted
-      ! to input the thermal roughness length, zt, (as well as z0) and use initial
-      ! estimate of z/L.
+      !> This iterative algorithm was taken from the revised surface layer 
+      !! scheme in WRF-ARW, written by Pedro Jimenez and Jimy Dudhia and 
+      !! summarized in Jimenez et al. (2012, MWR). This function was adapted
+      !! to input the thermal roughness length, zt, (as well as z0) and use initial
+      !! estimate of z/L.
 
       IMPLICIT NONE
       REAL, INTENT(IN) :: ri,za,z0,zt,zol1
@@ -3505,7 +3529,8 @@ END SUBROUTINE SFCLAY1D_mynn
       return
       end function
 !====================================================================
-
+!>\ingroup mynn_sfc
+!!
    SUBROUTINE psi_init(psi_opt,errmsg,errflg)
 
     integer                       :: N,psi_opt
@@ -3610,6 +3635,8 @@ END SUBROUTINE SFCLAY1D_mynn
 ! ==================================================================
 ! ... integrated similarity functions from GFS...
 !
+!>\ingroup mynn_sfc
+!!
    REAL function psim_stable_full_gfs(zolf)
         REAL :: zolf
         REAL, PARAMETER :: alpha4 = 20.
@@ -3621,6 +3648,8 @@ END SUBROUTINE SFCLAY1D_mynn
         return
    end function
 
+!>\ingroup mynn_sfc
+!!
    REAL function psih_stable_full_gfs(zolf)
         REAL :: zolf
         REAL, PARAMETER :: alpha4 = 20.
@@ -3632,6 +3661,8 @@ END SUBROUTINE SFCLAY1D_mynn
         return
    end function
 
+!>\ingroup mynn_sfc
+!!
    REAL function psim_unstable_full_gfs(zolf)
         REAL :: zolf
         REAL :: hl1,tem1
@@ -3650,6 +3681,8 @@ END SUBROUTINE SFCLAY1D_mynn
         return
    end function
 
+!>\ingroup mynn_sfc
+!!
    REAL function psih_unstable_full_gfs(zolf)
         REAL :: zolf
         REAL :: hl1,tem1
@@ -3668,9 +3701,8 @@ END SUBROUTINE SFCLAY1D_mynn
         return
    end function
 
-!=================================================================
-! look-up table functions - or, if beyond -10 < z/L < 10, recalculate
-!=================================================================
+!>\ingroup mynn_sfc
+!! look-up table functions - or, if beyond -10 < z/L < 10, recalculate
    REAL function psim_stable(zolf,psi_opt)
         integer :: nzol,psi_opt
         real    :: rzol,zolf
@@ -3690,6 +3722,7 @@ END SUBROUTINE SFCLAY1D_mynn
       return
    end function
 
+!>\ingroup mynn_sfc
    REAL function psih_stable(zolf,psi_opt)
         integer :: nzol,psi_opt
         real    :: rzol,zolf
@@ -3709,6 +3742,7 @@ END SUBROUTINE SFCLAY1D_mynn
       return
    end function
 
+!>\ingroup mynn_sfc
    REAL function psim_unstable(zolf,psi_opt)
         integer :: nzol,psi_opt
         real    :: rzol,zolf
@@ -3728,6 +3762,7 @@ END SUBROUTINE SFCLAY1D_mynn
       return
    end function
 
+!>\ingroup mynn_sfc
    REAL function psih_unstable(zolf,psi_opt)
         integer :: nzol,psi_opt
         real    :: rzol,zolf
@@ -3749,4 +3784,3 @@ END SUBROUTINE SFCLAY1D_mynn
 !========================================================================
 
 END MODULE module_sf_mynn
-

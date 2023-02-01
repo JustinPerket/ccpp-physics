@@ -29,13 +29,10 @@
 
       end subroutine samfdeepcnv_init
 
-      subroutine samfdeepcnv_finalize()
-      end subroutine samfdeepcnv_finalize
-
-!> \defgroup SAMFdeep GFS Scale-Aware Mass-Flux Deep Convection Scheme Module
-!! @{
-!>  \brief This subroutine contains the entirety of the SAMF deep convection
+!> \defgroup SAMFdeep GFS saSAS Deep Convection Module
+!> This subroutine contains the entirety of the SAMF deep convection
 !! scheme.
+!> @{
 !!
 !! For grid sizes larger than threshold value, as in Grell (1993) \cite grell_1993 , the SAMF
 !! deep convection scheme can be described in terms of three types of
@@ -74,19 +71,18 @@
 !!  -# For the "feedback control", calculate updated values of the state variables by multiplying the cloud base mass flux and the tendencies calculated per unit cloud base mass flux from the static control.
 !!
 !!  \section samfdeep_detailed GFS samfdeepcnv Detailed Algorithm
-!!  @{
-      subroutine samfdeepcnv_run (im,km,itc,ntc,cliq,cp,cvap,           &
+      subroutine samfdeepcnv_run (im,km,first_time_step,restart,        &
+     &    tmf,qmicro,itc,ntc,cliq,cp,cvap,                              &
      &    eps,epsm1,fv,grav,hvap,rd,rv,                                 &
      &    t0c,delt,ntk,ntr,delp,                                        &
-     &    prslp,psp,phil,qtr,q1,t1,u1,v1,fscav,hwrf_samfdeep,           &
-     &    cldwrk,rn,kbot,ktop,kcnv,islimsk,garea,                       &
-     &    dot,ncloud,hpbl,ud_mf,dd_mf,dt_mf,cnvw,cnvc,                  &
+     &    prslp,psp,phil,qtr,prevsq,q,q1,t1,u1,v1,fscav,                &
+     &    hwrf_samfdeep,progsigma,cldwrk,rn,kbot,ktop,kcnv,             &
+     &    islimsk,garea,dot,ncloud,hpbl,ud_mf,dd_mf,dt_mf,cnvw,cnvc,    &
      &    QLCN, QICN, w_upi, cf_upi, CNV_MFD,                           &
      &    CNV_DQLDT,CLCN,CNV_FICE,CNV_NDROP,CNV_NICE,mp_phys,mp_phys_mg,&
      &    clam,c0s,c1,betal,betas,evef,pgcon,asolfac,                   &
-     &    do_ca, ca_closure, ca_entr, ca_trigger, nthresh, ca_deep,     &
-     &    rainevap,                                                     &
-     &    errmsg,errflg)
+     &    do_ca, ca_closure, ca_entr, ca_trigger, nthresh,ca_deep,      &
+     &    rainevap,sigmain, sigmaout, errmsg,errflg)
 !
       use machine , only : kind_phys
       use funcphys , only : fpvs
@@ -101,10 +97,14 @@
       real(kind=kind_phys), intent(in) :: psp(:), delp(:,:),            &
      &   prslp(:,:),  garea(:), hpbl(:), dot(:,:), phil(:,:)
       real(kind=kind_phys), dimension(:), intent(in) :: fscav
-      logical, intent(in)  :: hwrf_samfdeep
+      logical, intent(in)  :: first_time_step,restart,hwrf_samfdeep,    &
+     &     progsigma
       real(kind=kind_phys), intent(in) :: nthresh
       real(kind=kind_phys), intent(in) :: ca_deep(:)
+      real(kind=kind_phys), intent(in) :: sigmain(:,:),qmicro(:,:),     &
+     &     tmf(:,:),q(:,:), prevsq(:,:)
       real(kind=kind_phys), intent(out) :: rainevap(:)
+      real(kind=kind_phys), intent(out) :: sigmaout(:,:)
       logical, intent(in)  :: do_ca,ca_closure,ca_entr,ca_trigger
 
       integer, intent(inout)  :: kcnv(:)
@@ -149,23 +149,22 @@
      &                     dh,      dhh,     dp,
      &                     dq,      dqsdp,   dqsdt,   dt,
      &                     dt2,     dtmax,   dtmin,
-     &                     dxcrtas, dxcrtuf, 
+     &                     dxcrtas, dxcrtuf,
      &                     dv1h,    dv2h,    dv3h,
-     &                     dv2q,
      &                     dz,      dz1,     e1,      edtmax,
      &                     edtmaxl, edtmaxs, el2orc,  elocp,
      &                     es,      etah,
      &                     cthk,    dthk,
 !    &                     evfact,  evfactl,
      &                     fact1,   fact2,   factor,
-     &                     gamma,   pprime,  cm,
+     &                     gamma,   pprime,  cm,      cq,
      &                     qlk,     qrch,    qs,
      &                     rain,    rfact,   shear,   tfac,
      &                     val,     val1,    val2,
      &                     w1,      w1l,     w1s,     w2,
      &                     w2l,     w2s,     w3,      w3l,
      &                     w3s,     w4,      w4l,     w4s,
-     &                     rho,     betaw,
+     &                     rho,     betaw,   tauadv,
      &                     xdby,    xpw,     xpwd,
 !    &                     xqrch,   mbdt,    tem,
      &                     xqrch,   tem,     tem1,    tem2,
@@ -179,8 +178,7 @@
 !     real(kind=kind_phys) aa1(im),     acrt(im),   acrtfct(im),
       real(kind=kind_phys) aa1(im),     tkemean(im),clamt(im),
      &                     ps(im),      del(im,km), prsl(im,km),
-!    &                     umean(im),   tauadv(im), gdx(im),
-     &                     gdx(im),
+     &                     umean(im),   advfac(im), gdx(im),
      &                     delhbar(im), delq(im),   delq2(im),
      &                     delqbar(im), delqev(im), deltbar(im),
      &                     deltv(im),   dtconv(im), edt(im),
@@ -210,6 +208,11 @@ cj
 !     &                     bb1,     bb2
      &                     bb1,     bb2,     wucb
 !
+!  parameters for prognostic sigma closure                                                                                                                                                      
+      real(kind=kind_phys) omega_u(im,km),zdqca(im,km),qlks(im,km),
+     &     omegac(im),zeta(im,km),dbyo1(im,km),sigmab(im)
+      real(kind=kind_phys) gravinv
+      logical flag_shallow
 c  physical parameters
 !     parameter(grav=grav,asolfac=0.958)
 !     parameter(elocp=hvap/cp,el2orc=hvap*hvap/(rv*cp))
@@ -225,7 +228,7 @@ c  physical parameters
 !      Until a realistic Nccn is provided, Nccns are assumed
 !      as Nccn=100 for sea and Nccn=1000 for land
 !
-      parameter(cm=1.0)
+      parameter(cm=1.0,cq=1.3)
 !     parameter(fact1=(cvap-cliq)/rv,fact2=hvap/rv-fact1*t0c)
       parameter(clamd=0.03,tkemx=0.65,tkemn=0.05)
       parameter(clamca=0.03)
@@ -235,7 +238,7 @@ c  physical parameters
 !     parameter(cinacrmx=-120.,cinacrmn=-120.)
       parameter(cinacrmx=-120.,cinacrmn=-80.)
       parameter(bet1=1.875,cd1=.506,f1=2.0,gam1=.5)
-      parameter(betaw=.03,dxcrtas=8.e3,dxcrtuf=15.e3)
+      parameter(betaw=.03,dxcrtuf=15.e3)
 
 !
 !  local variables and arrays
@@ -249,8 +252,11 @@ c  variables for tracer wet deposition,
      &  wet_dep
 !
 !  for updraft velocity calculation
-      real(kind=kind_phys) wu2(im,km),     buo(im,km),    drag(im,km)
-      real(kind=kind_phys) wc(im),         scaldfunc(im), sigmagfm(im)
+      real(kind=kind_phys) wu2(im,km),     buo(im,km),    drag(im,km),
+     &                     wc(im)
+!
+!  for updraft fraction & scale-aware function
+      real(kind=kind_phys) scaldfunc(im), sigmagfm(im)
 !
 c  cloud water
 !     real(kind=kind_phys) tvo(im,km)
@@ -264,7 +270,7 @@ c  cloud water
      &                     dellae(im,km,ntr),
      &                     dellau(im,km),  dellav(im,km), hcko(im,km),
      &                     ucko(im,km),    vcko(im,km),   qcko(im,km),
-     &                     ecko(im,km,ntr),
+     &                     ecko(im,km,ntr),ercko(im,km,ntr),
      &                     eta(im,km),     etad(im,km),   zi(im,km),
      &                     qrcko(im,km),   qrcdo(im,km),
      &                     pwo(im,km),     pwdo(im,km),   c0t(im,km),
@@ -299,6 +305,7 @@ c    &            .743,.813,.886,.947,1.138,1.377,1.896/
       errmsg = ''
       errflg = 0
 
+      gravinv = 1./grav
 
       elocp = hvap/cp
       el2orc = hvap*hvap/(rv*cp)
@@ -365,7 +372,9 @@ c
         xpwav(i)= 0.
         xpwev(i)= 0.
         vshear(i) = 0.
+        advfac(i) = 0.
         rainevap(i) = 0.
+        omegac(i)=0.
         gdx(i) = sqrt(garea(i))
       enddo
 
@@ -392,6 +401,7 @@ c
            c0(i) = c0s
         endif
       enddo
+!
 !>  - determine rain conversion parameter above the freezing level which exponentially decreases with decreasing temperature from Han et al.'s (2017) \cite han_et_al_2017 equation 8.
       do k = 1, km
         do i = 1, im
@@ -570,6 +580,17 @@ c
           endif
         enddo
       enddo
+
+      do k = 1, km
+         do i = 1, im
+            dbyo1(i,k)=0.
+            zdqca(i,k)=0.
+            qlks(i,k)=0.
+            omega_u(i,k)=0.
+            zeta(i,k)=1.0
+         enddo
+      enddo
+
 !
 !  initialize tracer variables
 !
@@ -582,6 +603,7 @@ c
               ctr(i,k,kk)  = qtr(i,k,n)
               ctro(i,k,kk) = qtr(i,k,n)
               ecko(i,k,kk) = 0.
+              ercko(i,k,kk) = 0.
               ecdo(i,k,kk) = 0.
             endif
           enddo
@@ -901,8 +923,6 @@ c
       enddo
       if(totflg) return
 !!
-!
-!Lisa: at this point only trigger criteria is set
 
 ! turbulent entrainment rate assumed to be proportional
 !   to subcloud mean TKE
@@ -1145,6 +1165,7 @@ c
           if(cnvflg(i)) then
             indx = kb(i)
             ecko(i,indx,n) = ctro(i,indx,n)
+            ercko(i,indx,n) = ctro(i,indx,n)
           endif
         enddo
        enddo
@@ -1192,9 +1213,11 @@ c
             if(k > kb(i) .and. k < kmax(i)) then
               dz   = zi(i,k) - zi(i,k-1)
               tem  = 0.25 * (xlamue(i,k)+xlamue(i,k-1)) * dz
+              tem  = cq * tem
               factor = 1. + tem
               ecko(i,k,n) = ((1.-tem)*ecko(i,k-1,n)+tem*
      &                     (ctro(i,k,n)+ctro(i,k-1,n)))/factor
+              ercko(i,k,n) = ecko(i,k,n)
             endif
           endif
         enddo
@@ -1209,9 +1232,11 @@ c
                  if(k > kb(i) .and. k < kmax(i)) then
                    dz = zi(i,k) - zi(i,k-1)
                    tem  = 0.25 * (xlamue(i,k)+xlamue(i,k-1)) * dz
+                   tem  = cq * tem
                    factor = 1. + tem
                    ecko(i,k,kk) = ((1. - tem) * ecko(i,k-1,kk) + tem *
      &                     (ctro(i,k,kk) + ctro(i,k-1,kk))) / factor
+                   ercko(i,k,kk) = ecko(i,k,kk)
                    chem_c(i,k,n) = fscav(n) * ecko(i,k,kk)
                    tem = chem_c(i,k,n) / (1. + c0t(i,k) * dz)
                    chem_pw(i,k,n) = c0t(i,k) * dz * tem * eta(i,k-1)
@@ -1459,10 +1484,10 @@ c
               qrch = qeso(i,k)
      &             + gamma * dbyo(i,k) / (hvap * (1. + gamma))
 cj
-              tem  = 0.5 * (xlamue(i,k)+xlamue(i,k-1)) * dz
-              tem1 = 0.25 * (xlamud(i,k)+xlamud(i,k-1)) * dz
-              factor = 1. + tem - tem1
-              qcko(i,k) = ((1.-tem1)*qcko(i,k-1)+tem*0.5*
+              tem  = 0.25 * (xlamue(i,k)+xlamue(i,k-1)) * dz
+              tem  = cq * tem
+              factor = 1. + tem
+              qcko(i,k) = ((1.-tem)*qcko(i,k-1)+tem*
      &                     (qo(i,k)+qo(i,k-1)))/factor
               qrcko(i,k) = qcko(i,k)
 cj
@@ -1490,6 +1515,7 @@ c
                 pwavo(i) = pwavo(i) + pwo(i,k)
 !               cnvwt(i,k) = (etah*qlk + pwo(i,k)) * grav / dp
                 cnvwt(i,k) = etah * qlk * grav / dp
+                qlks(i,k)=qlk
               endif
 !
 !  compute buoyancy and drag for updraft velocity
@@ -1562,6 +1588,7 @@ c
               dz1 = zo(i,k+1) - zo(i,k)
 !             aa1(i) = aa1(i) + buo(i,k) * dz1 * eta(i,k)
               aa1(i) = aa1(i) + buo(i,k) * dz1
+              dbyo1(i,k) = hcko(i,k) - heso(i,k)
             endif
           endif
         enddo
@@ -1592,7 +1619,7 @@ c
 c
       do i = 1, im
         flg(i) = cnvflg(i)
-        ktcon1(i) = kmax(i)
+        ktcon1(i) = ktcon(i)
       enddo
       do k = 2, km1
         do i = 1, im
@@ -1611,8 +1638,11 @@ c
 !             aa2(i) = aa2(i) +
 !!   &                 dz1 * eta(i,k) * grav * fv *
 !    &                 dz1 * grav * fv *
-!    &                 max(val,(qeso(i,k) - qo(i,k)))
-              if(aa2(i) < 0.) then
+!    &                 max(val,(qeso(i,k) - qo(i,k)))        
+!NRL MNM: Limit overshooting not to be deeper than half the actual cloud              
+              tem  = 0.5 * (zi(i,ktcon(i))-zi(i,kbcon(i)))
+              tem1 = zi(i,k)-zi(i,ktcon(i))
+              if(aa2(i) < 0. .or. tem1 >= tem) then
                 ktcon1(i) = k
                 flg(i) = .false.
               endif
@@ -1634,10 +1664,10 @@ c
               qrch = qeso(i,k)
      &             + gamma * dbyo(i,k) / (hvap * (1. + gamma))
 cj
-              tem  = 0.5 * (xlamue(i,k)+xlamue(i,k-1)) * dz
-              tem1 = 0.25 * (xlamud(i,k)+xlamud(i,k-1)) * dz
-              factor = 1. + tem - tem1
-              qcko(i,k) = ((1.-tem1)*qcko(i,k-1)+tem*0.5*
+              tem  = 0.25 * (xlamue(i,k)+xlamue(i,k-1)) * dz
+              tem  = cq * tem
+              factor = 1. + tem
+              qcko(i,k) = ((1.-tem)*qcko(i,k-1)+tem*
      &                     (qo(i,k)+qo(i,k-1)))/factor
               qrcko(i,k) = qcko(i,k)
 cj
@@ -1660,6 +1690,7 @@ c
                 pwavo(i) = pwavo(i) + pwo(i,k)
 !               cnvwt(i,k) = (etah*qlk + pwo(i,k)) * grav / dp
                 cnvwt(i,k) = etah * qlk * grav / dp
+                qlks(i,k)=qlk
               endif
             endif
           endif
@@ -1701,6 +1732,20 @@ c
           endif
         enddo
       enddo
+
+      if(progsigma)then                                                                                                                                                                   
+          do k = 2, km1
+            do i = 1, im
+               if (cnvflg(i)) then
+                  if(k > kbcon1(i) .and. k < ktcon(i)) then
+                     rho = po(i,k)*100. / (rd * to(i,k))
+                     omega_u(i,k)=-1.0*sqrt(wu2(i,k))*rho*grav
+                     omega_u(i,k)=MAX(omega_u(i,k),-80.)
+                  endif
+               endif
+            enddo
+         enddo
+      endif 
 !
 !  compute updraft velocity average over the whole cumulus
 !
@@ -1733,6 +1778,57 @@ c
         endif
       enddo
 c
+
+!> - For progsigma = T, calculate the mean updraft velocity within the cloud (omegac),cast in pressure coordinates.                                                                                                                                  
+      if(progsigma)then                                                                                                                                                            
+         do i = 1, im
+            omegac(i) = 0.
+            sumx(i) = 0.
+         enddo
+         do k = 2, km1
+            do i = 1, im
+               if (cnvflg(i)) then
+                  if(k > kbcon1(i) .and. k < ktcon(i)) then
+                     dp = 1000. * del(i,k)
+                     tem = 0.5 * (omega_u(i,k) + omega_u(i,k-1))
+                     omegac(i) = omegac(i) + tem * dp
+                     sumx(i) = sumx(i) + dp
+                  endif
+               endif
+            enddo
+         enddo
+         do i = 1, im
+            if(cnvflg(i)) then
+               if(sumx(i) == 0.) then
+                  cnvflg(i)=.false.
+               else
+                  omegac(i) = omegac(i) / sumx(i)
+               endif
+               val = -1.2
+               if (omegac(i) > val) cnvflg(i)=.false.
+            endif
+         enddo
+
+!> - For progsigma = T, calculate the xi term in Bengtsson et al. 2022 \cite Bengtsson_2022 (equation 8)
+         do k = 2, km1
+            do i = 1, im
+               if (cnvflg(i)) then
+                  if(k >= kbcon1(i) .and. k < ktcon(i)) then
+                     if(omega_u(i,k) .ne. 0.)then
+                        zeta(i,k)=eta(i,k)*(omegac(i)/omega_u(i,k))
+                     else
+                        zeta(i,k)=0.
+                     endif
+                    zeta(i,k)=MAX(0.,zeta(i,k))
+                    zeta(i,k)=MIN(1.,zeta(i,k))
+                  endif
+               endif
+            enddo
+         enddo
+      
+
+      endif !if progsigma
+
 c exchange ktcon with ktcon1
 c
 !> - Swap the indices of the convective cloud top (ktcon) and the overshooting convection top (ktcon1) to use the same cloud top level in the calculations of \f$A^+\f$ and \f$A^*\f$.
@@ -1764,11 +1860,28 @@ c
           if(dq > 0.) then
             qlko_ktcon(i) = dq
             qcko(i,k) = qrch
+            qlks(i,k) = qlko_ktcon(i)
           endif
         endif
       enddo
       endif
 c
+
+c store term needed for "termC" in prognostic area fraction closure
+      if(progsigma)then
+         do k = 2, km1
+            do i = 1, im
+               dp = 1000. * del(i,k)
+               if (cnvflg(i)) then
+                  if(k > kbcon(i) .and. k < ktcon(i)) then
+                     zdqca(i,k)=((qlks(i,k)-qlks(i,k-1)) +
+     &                    pwo(i,k)+dellal(i,k))
+                  endif
+               endif
+            enddo
+         enddo
+      endif
+
 ccccc if(lat.==.latd.and.lon.==.lond.and.cnvflg(i)) then
 ccccc   print *, ' aa1(i) before dwndrft =', aa1(i)
 ccccc endif
@@ -1926,6 +2039,7 @@ cj
           if (cnvflg(i) .and. k < jmin(i)) then
               dz = zi(i,k+1) - zi(i,k)
               tem  = 0.5 * xlamde * dz
+              tem  = cq * tem
               factor = 1. + tem
               ecdo(i,k,n) = ((1.-tem)*ecdo(i,k+1,n)+tem*
      &                     (ctro(i,k,n)+ctro(i,k+1,n)))/factor
@@ -1945,15 +2059,10 @@ c
 !             detad      = etad(i,k+1) - etad(i,k)
 cj
               dz = zi(i,k+1) - zi(i,k)
-              if(k >= kd94(i)) then
-                 tem  = xlamde * dz
-                 tem1 = 0.5 * xlamdd * dz
-              else
-                 tem  = xlamde * dz
-                 tem1 = 0.5 * (xlamd(i)+xlamdd) * dz
-              endif
-              factor = 1. + tem - tem1
-              qcdo(i,k) = ((1.-tem1)*qrcdo(i,k+1)+tem*0.5*
+              tem  = 0.5 * xlamde * dz
+              tem  = cq * tem
+              factor = 1. + tem
+              qcdo(i,k) = ((1.-tem)*qrcdo(i,k+1)+tem*
      &                     (qo(i,k)+qo(i,k+1)))/factor
 cj
 !             pwdo(i,k)  = etad(i,k+1) * qcdo(i,k+1) -
@@ -2084,7 +2193,6 @@ c
               dv1h = heo(i,k)
               dv2h = .5 * (heo(i,k) + heo(i,k-1))
               dv3h = heo(i,k-1)
-              dv2q = .5 * (qo(i,k) + qo(i,k-1))
 c
               tem  = 0.5 * (xlamue(i,k)+xlamue(i,k-1))
               tem1 = 0.5 * (xlamud(i,k)+xlamud(i,k-1))
@@ -2107,11 +2215,12 @@ cj
      &    +  adw*edto(i)*ptem1*etad(i,k)*.5*(hcdo(i,k)+hcdo(i,k-1))*dz
      &         ) * factor
 cj
+              tem1 = -eta(i,k) * qrcko(i,k)
+              tem2 = -eta(i,k-1) * qcko(i,k-1)
+              ptem1 = -etad(i,k) * qrcdo(i,k)
+              ptem2 = -etad(i,k-1) * qcdo(i,k-1)
               dellaq(i,k) = dellaq(i,k) +
-     &     (- (aup*tem*eta(i,k-1)+adw*edto(i)*ptem*etad(i,k))*dv2q*dz
-     &    +  aup*tem1*eta(i,k-1)*.5*(qrcko(i,k)+qcko(i,k-1))*dz
-     &    +  adw*edto(i)*ptem1*etad(i,k)*.5*(qrcdo(i,k)+qcdo(i,k-1))*dz
-     &         ) * factor
+     &           (aup*(tem1-tem2)-adw*edto(i)*(ptem1-ptem2))*factor
 cj
               tem1=eta(i,k)*(uo(i,k)-ucko(i,k))
               tem2=eta(i,k-1)*(uo(i,k-1)-ucko(i,k-1))
@@ -2141,7 +2250,7 @@ cj
               if(k > jmin(i)) adw = 0.
               dp = 1000. * del(i,k)
 cj
-              tem1 = -eta(i,k) * ecko(i,k,n)
+              tem1 = -eta(i,k) * ercko(i,k,n)
               tem2 = -eta(i,k-1) * ecko(i,k-1,n)
               ptem1 = -etad(i,k) * ecdo(i,k,n)
               ptem2 = -etad(i,k-1) * ecdo(i,k-1,n)
@@ -2355,14 +2464,22 @@ c
 c
 c------- final changed variable per unit mass flux
 c
-!> - If grid size is less than a threshold value (dxcrtas: currently 8km), the quasi-equilibrium assumption of Arakawa-Schubert is not used any longer.
+!> - If grid size is less than a threshold value (dxcrtas: currently 8km if progsigma is not used and 30km if progsigma is used), the quasi-equilibrium assumption of Arakawa-Schubert is not used any longer.
 !
+      if(progsigma)then
+         dxcrtas=30.e3
+      else
+         dxcrtas=8.e3
+      endif
+
+
       do i = 1, im
          asqecflg(i) = cnvflg(i)
          if(asqecflg(i) .and. gdx(i) < dxcrtas) then
             asqecflg(i) = .false.
          endif
       enddo
+
 !
 !> - If grid size is larger than the threshold value (i.e., asqecflg=.true.), the quasi-equilibrium assumption is used to obtain the cloud base mass flux. To begin with, calculate the change in the temperature and moisture profiles per unit cloud base mass flux.
       do k = 1, km
@@ -2500,10 +2617,10 @@ c
               xqrch = qeso(i,k)
      &              + gamma * xdby / (hvap * (1. + gamma))
 cj
-              tem  = 0.5 * (xlamue(i,k)+xlamue(i,k-1)) * dz
-              tem1 = 0.25 * (xlamud(i,k)+xlamud(i,k-1)) * dz
-              factor = 1. + tem - tem1
-              qcko(i,k) = ((1.-tem1)*qcko(i,k-1)+tem*0.5*
+              tem  = 0.25 * (xlamue(i,k)+xlamue(i,k-1)) * dz
+              tem  = cq * tem
+              factor = 1. + tem
+              qcko(i,k) = ((1.-tem)*qcko(i,k-1)+tem*
      &                     (qo(i,k)+qo(i,k-1)))/factor
 cj
               dq = eta(i,k) * (qcko(i,k) - xqrch)
@@ -2589,15 +2706,10 @@ cj
 !             detad    = etad(i,k+1) - etad(i,k)
 cj
               dz = zi(i,k+1) - zi(i,k)
-              if(k >= kd94(i)) then
-                 tem  = xlamde * dz
-                 tem1 = 0.5 * xlamdd * dz
-              else
-                 tem  = xlamde * dz
-                 tem1 = 0.5 * (xlamd(i)+xlamdd) * dz
-              endif
-              factor = 1. + tem - tem1
-              qcdo(i,k) = ((1.-tem1)*qrcd(i,k+1)+tem*0.5*
+              tem  = 0.5 * xlamde * dz
+              tem  = cq * tem
+              factor = 1. + tem
+              qcdo(i,k) = ((1.-tem)*qrcd(i,k+1)+tem*
      &                     (qo(i,k)+qo(i,k+1)))/factor
 cj
 !             xpwd     = etad(i,k+1) * qcdo(i,k+1) -
@@ -2741,41 +2853,55 @@ c
       endif
 !
 !> - Calculate advective time scale (tauadv) using a mean cloud layer wind speed.
-!     do i= 1, im
-!       if(cnvflg(i)) then
-!         sumx(i) = 0.
-!         umean(i) = 0.
-!       endif
-!     enddo
-!     do k = 2, km1
-!       do i = 1, im
-!         if(cnvflg(i)) then
-!           if(k >= kbcon1(i) .and. k < ktcon1(i)) then
-!             dz = zi(i,k) - zi(i,k-1)
-!             tem = sqrt(u1(i,k)*u1(i,k)+v1(i,k)*v1(i,k))
-!             umean(i) = umean(i) + tem * dz
-!             sumx(i) = sumx(i) + dz
-!           endif
-!         endif
-!       enddo
-!     enddo
-!     do i= 1, im
-!       if(cnvflg(i)) then
-!          umean(i) = umean(i) / sumx(i)
-!          umean(i) = max(umean(i), 1.)
-!          tauadv(i) = gdx(i) / umean(i)
-!       endif
-!     enddo
+      do i= 1, im
+        if(cnvflg(i)) then
+          sumx(i) = 0.
+          umean(i) = 0.
+        endif
+      enddo
+      do k = 2, km1
+        do i = 1, im
+          if(cnvflg(i)) then
+            if(k >= kbcon1(i) .and. k < ktcon1(i)) then
+              dz = zi(i,k) - zi(i,k-1)
+              tem = sqrt(u1(i,k)*u1(i,k)+v1(i,k)*v1(i,k))
+              umean(i) = umean(i) + tem * dz
+              sumx(i) = sumx(i) + dz
+            endif
+          endif
+        enddo
+      enddo
+      do i= 1, im
+        if(cnvflg(i)) then
+           umean(i) = umean(i) / sumx(i)
+           umean(i) = max(umean(i), 1.)
+           tauadv = gdx(i) / umean(i)
+           advfac(i) = tauadv / dtconv(i)
+           advfac(i) = min(advfac(i), 1.)
+        endif
+      enddo
+
+!> - From Bengtsson et al. (2022) \cite Bengtsson_2022 prognostic closure scheme, equation 8, call progsigma_calc() to compute updraft area fraction based on a moisture budget
+      if(progsigma)then
+         flag_shallow = .false.
+         call progsigma_calc(im,km,first_time_step,restart,flag_shallow,
+     &        del,tmf,qmicro,dbyo1,zdqca,omega_u,zeta,hvap,delt,
+     &        prevsq,q,kbcon1,ktcon,cnvflg,
+     &        sigmain,sigmaout,sigmab,errmsg,errflg)
+      endif
+
 !> - From Han et al.'s (2017) \cite han_et_al_2017 equation 6, calculate cloud base mass flux as a function of the mean updraft velcoity for the grid sizes where the quasi-equilibrium assumption of Arakawa-Schubert is not valid any longer.
 !!  As discussed in Han et al. (2017) \cite han_et_al_2017 , when dtconv is larger than tauadv, the convective mixing is not fully conducted before the cumulus cloud is advected out of the grid cell. In this case, therefore, the cloud base mass flux is further reduced in proportion to the ratio of tauadv to dtconv.
+
       do i= 1, im
         if(cnvflg(i) .and. .not.asqecflg(i)) then
           k = kbcon(i)
           rho = po(i,k)*100. / (rd*to(i,k))
-!         tfac = tauadv(i) / dtconv(i)
-!         tfac = min(tfac, 1.)
-!         xmb(i) = tfac*betaw*rho*wc(i)
-          xmb(i) = betaw*rho*wc(i)
+          if(progsigma)then
+             xmb(i) = advfac(i)*sigmab(i)*((-1.0*omegac(i))*gravinv)
+          else
+             xmb(i) = advfac(i)*betaw*rho*wc(i)
+          endif
         endif
       enddo
 !> - For the cases where the quasi-equilibrium assumption of Arakawa-Schubert is valid, first calculate the large scale destabilization as in equation 5 of Pan and Wu (1995) \cite pan_and_wu_1995 :
@@ -2815,10 +2941,7 @@ c
 !!
 !!  Again when dtconv is larger than tauadv, the cloud base mass flux is further reduced in proportion to the ratio of tauadv to dtconv.
         if(asqecflg(i)) then
-!         tfac = tauadv(i) / dtconv(i)
-!         tfac = min(tfac, 1.)
-!         xmb(i) = -tfac * fld(i) / xk(i)
-          xmb(i) = -fld(i) / xk(i)
+          xmb(i) = -advfac(i) * fld(i) / xk(i)
         endif
       enddo
 !!
@@ -2832,18 +2955,6 @@ c
 !!
 !
 !> - For scale-aware parameterization, the updraft fraction (sigmagfm) is first computed as a function of the lateral entrainment rate at cloud base (see Han et al.'s (2017) \cite han_et_al_2017 equation 4 and 5), following the study by Grell and Freitas (2014) \cite grell_and_freitas_2014.
-      if(hwrf_samfdeep) then
-      do i = 1, im
-        if(cnvflg(i)) then
-          tem = min(max(xlamx(i), 7.e-5), 3.e-4)
-          tem = 0.2 / tem
-          tem1 = 3.14 * tem * tem
-          sigmagfm(i) = tem1 / garea(i)
-          sigmagfm(i) = max(sigmagfm(i), 0.001)
-          sigmagfm(i) = min(sigmagfm(i), 0.999)
-        endif
-      enddo
-      else
       do i = 1, im
         if(cnvflg(i)) then
           tem = min(max(xlamue(i,kbcon(i)), 7.e-5), 3.e-4)
@@ -2854,13 +2965,16 @@ c
           sigmagfm(i) = min(sigmagfm(i), 0.999)
         endif
       enddo
-      endif
 !
 !> - Then, calculate the reduction factor (scaldfunc) of the vertical convective eddy transport of mass flux as a function of updraft fraction from the studies by Arakawa and Wu (2013) \cite arakawa_and_wu_2013 (also see Han et al.'s (2017) \cite han_et_al_2017 equation 1 and 2). The final cloud base mass flux with scale-aware parameterization is obtained from the mass flux when sigmagfm << 1, multiplied by the reduction factor (Han et al.'s (2017) \cite han_et_al_2017 equation 2).
       do i = 1, im
         if(cnvflg(i)) then
           if (gdx(i) < dxcrtuf) then
-            scaldfunc(i) = (1.-sigmagfm(i)) * (1.-sigmagfm(i))
+             if(progsigma)then
+                scaldfunc(i)=(1.-sigmab(i))*(1.-sigmab(i))
+             else
+                scaldfunc(i) = (1.-sigmagfm(i)) * (1.-sigmagfm(i))
+             endif
             scaldfunc(i) = max(min(scaldfunc(i), 1.0), 0.)
           else
             scaldfunc(i) = 1.0
@@ -2870,16 +2984,6 @@ c
         endif
       enddo
 !
-      if (do_ca .and. ca_closure)then
-      do i = 1, im
-        if(cnvflg(i)) then
-           if (ca_deep(i) > nthresh) then
-              xmb(i) = xmb(i)*1.25
-           endif
-        endif
-      enddo
-      endif
-
 !> - Transport aerosols if present
 !
 !     if (do_aerosols)
@@ -2975,11 +3079,12 @@ c
         tsump(i) = 0.
         rtnp(i) = 1.
       enddo
-      do k = 1,km
+      do k = 1,km1
         do i = 1,im
           if(cnvflg(i) .and. k <= ktcon(i)) then
-            if(q1(i,k) < 0.) tsumn(i) = tsumn(i) + q1(i,k)
-            if(q1(i,k) > 0.) tsump(i) = tsump(i) + q1(i,k)
+            tem = q1(i,k) * delp(i,k) / grav
+            if(q1(i,k) < 0.) tsumn(i) = tsumn(i) + tem
+            if(q1(i,k) > 0.) tsump(i) = tsump(i) + tem
           endif
         enddo
       enddo
@@ -2994,7 +3099,7 @@ c
           endif
         endif
       enddo
-      do k = 1,km
+      do k = 1,km1
         do i = 1,im
           if(cnvflg(i) .and. k <= ktcon(i)) then
             if(rtnp(i) < 0.) then
@@ -3011,6 +3116,7 @@ c
       enddo
 !
       if (.not.hwrf_samfdeep) then
+       indx = ntk - 2
        do n = 1, ntr
 !
         do k = 1, km
@@ -3033,11 +3139,21 @@ c
           tsump(i) = 0.
           rtnp(i) = 1.
         enddo
-        do k = 1,km
+        do k = 1,km1
           do i = 1,im
             if(cnvflg(i) .and. k <= ktcon(i)) then
-              if(ctr(i,k,n) < 0.) tsumn(i) = tsumn(i) + ctr(i,k,n)
-              if(ctr(i,k,n) > 0.) tsump(i) = tsump(i) + ctr(i,k,n)
+              if(n == indx) then
+                if(k > 1) then
+                  dz = zi(i,k) - zi(i,k-1)
+                else
+                  dz = zi(i,k)
+                endif
+                tem = ctr(i,k,n) * dz
+              else
+                tem = ctr(i,k,n) * delp(i,k) / grav
+              endif
+              if(ctr(i,k,n) < 0.) tsumn(i) = tsumn(i) + tem
+              if(ctr(i,k,n) > 0.) tsump(i) = tsump(i) + tem
             endif
           enddo
         enddo
@@ -3052,7 +3168,7 @@ c
             endif
           endif
         enddo
-        do k = 1,km
+        do k = 1,km1
           do i = 1,im
             if(cnvflg(i) .and. k <= ktcon(i)) then
               if(rtnp(i) < 0.) then
@@ -3447,6 +3563,5 @@ c
       end subroutine samfdeepcnv_run
 
 !> @}
-!! @}
 
       end module samfdeepcnv

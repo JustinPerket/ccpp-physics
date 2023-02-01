@@ -7,6 +7,7 @@ module noahmp_glacier_globals
 
   use machine ,   only : kind_phys
   use sfc_diff, only   : stability
+  use module_sf_noahmplsm, only : sfcdif4
 
   implicit none
 
@@ -62,6 +63,7 @@ module noahmp_glacier_globals
   INTEGER :: OPT_GLA != 1    !(suggested 1)
 
   INTEGER :: OPT_SFC != 1    !(suggested 1)
+  INTEGER :: OPT_TRS != 1    !(suggested 2)
 
 ! adjustable parameters for snow processes
 
@@ -121,7 +123,10 @@ contains
                    iloc      ,jloc    ,cosz     ,nsnow    ,nsoil   ,dt        , & ! in : time/space/model-related
                    sfctmp    ,sfcprs  ,uu       ,vv       ,q2      ,soldn     , & ! in : forcing
                    prcp      ,lwdn    ,tbot     ,zlvl     ,ficeold ,zsoil     , & ! in : forcing
-                   thsfc_loc ,prslkix ,prsik1x  ,prslk1x  ,sigmaf1 ,garea1    , & ! in :
+                   thsfc_loc ,prslkix ,prsik1x  ,prslk1x  ,                     &
+                   psfc      ,pblhx  ,iz0tlnd   ,itime    ,                     &
+                   sigmaf1 ,garea1   ,psi_opt   ,                               & ! in :
+                   ep_1      ,ep_2   ,cp        ,                               &
                    qsnow     ,sneqvo  ,albold   ,cm       ,ch      ,isnow     , & ! in/out : 
                    sneqv     ,smc     ,zsnso    ,snowh    ,snice   ,snliq     , & ! in/out :
                    tg        ,stc     ,sh2o     ,tauss    ,qsfc               , & ! in/out : 
@@ -148,6 +153,8 @@ contains
   real (kind=kind_phys)                           , intent(in)    :: cosz   !< cosine solar zenith angle [0-1]
   integer                        , intent(in)    :: nsnow  !< maximum no. of snow layers        
   integer                        , intent(in)    :: nsoil  !< no. of soil layers        
+  integer                        , intent(in)    :: psi_opt
+
   real (kind=kind_phys)                           , intent(in)    :: dt     !< time step [sec]
   real (kind=kind_phys)                           , intent(in)    :: sfctmp !< surface air temperature [k]
   real (kind=kind_phys)                           , intent(in)    :: sfcprs !< pressure (pa)
@@ -165,6 +172,15 @@ contains
   real (kind=kind_phys)                           , intent(in)    :: prslkix !< pressure (pa)
   real (kind=kind_phys)                           , intent(in)    :: prsik1x !< pressure (pa)
   real (kind=kind_phys)                           , intent(in)    :: prslk1x !< pressure (pa)
+
+  real (kind=kind_phys)                           , intent(in)    :: psfc    !  surface pressure
+  real (kind=kind_phys)                           , intent(in)    :: pblhx   !  pbl height
+  real (kind=kind_phys)                           , intent(in)    :: ep_1 
+  real (kind=kind_phys)                           , intent(in)    :: ep_2 
+  real (kind=kind_phys)                           , intent(in)    :: cp 
+  integer                                         , intent(in)    :: iz0tlnd !  
+  integer                                         , intent(in)    :: itime   !< timestep
+
   real (kind=kind_phys)                           , intent(in)    :: sigmaf1 !< areal fractional cover of green vegetation 
   real (kind=kind_phys)                           , intent(in)    :: garea1  !< area of the grid cell
 
@@ -273,6 +289,8 @@ contains
                          vv        ,solad   ,solai   ,cosz    ,zlvl    ,          & !in
                          tbot      ,zbot    ,zsnso   ,dzsnso  ,sigmaf1 ,garea1  , & !in
                          thsfc_loc ,prslkix ,prsik1x ,prslk1x ,                   & !in
+                         psfc      ,pblhx     ,iz0tlnd ,itime ,psi_opt ,          &
+                         ep_1, ep_2, cp,                                          & 
                          tg        ,stc     ,snowh   ,sneqv   ,sneqvo  ,sh2o    , & !inout
                          smc       ,snice   ,snliq   ,albold  ,cm      ,ch      , & !inout
 #ifdef CCPP
@@ -399,11 +417,14 @@ contains
 ! ==================================================================================================
 ! --------------------------------------------------------------------------------------------------
 !>\ingroup NoahMP_LSM
+!! Compute energy budget (momentum & energy fluxes and phase changes).
   subroutine energy_glacier (nsnow     ,nsoil   ,isnow   ,dt      ,qsnow   ,rhoair  , & !in
                              eair      ,sfcprs  ,qair    ,sfctmp  ,lwdn    ,uu      , & !in
                              vv        ,solad   ,solai   ,cosz    ,zref    ,          & !in
                              tbot      ,zbot    ,zsnso   ,dzsnso  ,sigmaf1 ,garea1  , & !in
                              thsfc_loc ,prslkix ,prsik1x ,prslk1x ,                   & !in
+                             psfc      ,pblhx   ,iz0tlnd ,itime   ,psi_opt          , &
+                             ep_1, ep_2, cp,                                          & 
                              tg        ,stc     ,snowh   ,sneqv   ,sneqvo  ,sh2o    , & !inout
                              smc       ,snice   ,snliq   ,albold  ,cm      ,ch      , & !inout
 #ifdef CCPP
@@ -426,6 +447,8 @@ contains
 ! inputs
   integer                           , intent(in)    :: nsnow  !< maximum no. of snow layers        
   integer                           , intent(in)    :: nsoil  !< number of soil layers
+  integer                           , intent(in)    :: psi_opt
+
   integer                           , intent(in)    :: isnow  !< actual no. of snow layers
   real (kind=kind_phys)                              , intent(in)    :: dt     !< time step [sec]
   real (kind=kind_phys)                              , intent(in)    :: qsnow  !< snowfall on the ground (mm/s)
@@ -450,6 +473,15 @@ contains
   real (kind=kind_phys)                              , intent(in)    :: prslkix ! in exner function
   real (kind=kind_phys)                              , intent(in)    :: prsik1x ! in exner function
   real (kind=kind_phys)                              , intent(in)    :: prslk1x ! in exner function
+
+  real (kind=kind_phys)                              , intent(in)    :: pblhx   !< PBL height (m)
+  real (kind=kind_phys)                              , intent(in)    :: psfc    !< surface pressure
+  real (kind=kind_phys)                              , intent(in)    :: ep_1 
+  real (kind=kind_phys)                              , intent(in)    :: ep_2 
+  real (kind=kind_phys)                              , intent(in)    :: cp 
+  integer                                            , intent(in)    :: iz0tlnd !< z0t option
+  integer                                            , intent(in)    :: itime   !< integration time
+
   real (kind=kind_phys)                              , intent(in)    :: sigmaf1 !< areal fractional cover of green vegetation 
   real (kind=kind_phys)                              , intent(in)    :: garea1  !< area of the grid cell
 
@@ -475,7 +507,7 @@ contains
 #endif
 
 ! outputs
-  integer, dimension(-nsnow+1:nsoil), intent(out)   :: imelt  !< phase change index [1-melt; 2-freeze]
+  integer, dimension(-nsnow+1:nsoil)                 , intent(out)   :: imelt  !< phase change index [1-melt; 2-freeze]
   real (kind=kind_phys)   , dimension(-nsnow+1:    0), intent(out)   :: snicev !< partial volume ice [m3/m3]
   real (kind=kind_phys)   , dimension(-nsnow+1:    0), intent(out)   :: snliqv !< partial volume liq. water [m3/m3]
   real (kind=kind_phys)   , dimension(-nsnow+1:    0), intent(out)   :: epore  !< effective porosity [m3/m3]
@@ -560,7 +592,9 @@ contains
                        zlvl      ,zpd     ,qair    ,sfctmp  ,rhoair  ,sfcprs ,       & !in
                        ur        ,gamma   ,rsurf   ,lwdn    ,rhsur   ,smc    ,       & !in
                        eair      ,stc     ,sag     ,snowh   ,lathea  ,sh2o   ,       & !in
-                       thsfc_loc ,prslkix ,prsik1x ,prslk1x ,sigmaf1 ,garea1 ,       & !in
+                       thsfc_loc ,prslkix ,prsik1x ,prslk1x ,                        &
+                       psfc      ,pblhx   ,iz0tlnd ,itime   ,uu      ,vv     ,       &
+                       sigmaf1   ,garea1  ,psi_opt ,ep_1, ep_2, cp,                  & !in
 #ifdef CCPP
                        cm        ,ch      ,tg      ,qsfc    ,errmsg  ,errflg ,       & !inout
 #else
@@ -616,6 +650,7 @@ contains
   end subroutine energy_glacier
 ! ==================================================================================================
 !>\ingroup NoahMP_LSM
+!! calculate thermal properties of soil, snow, lake, and frozen soil.
   subroutine thermoprop_glacier (nsoil   ,nsnow   ,isnow   ,dzsnso  , & !in
                                  dt      ,snowh   ,snice   ,snliq   , & !in
                                  df      ,hcpct   ,snicev  ,snliqv  ,epore   , & !out
@@ -748,6 +783,7 @@ contains
   end subroutine csnow_glacier
 !===================================================================================================
 !>\ingroup NoahMP_LSM
+!! Compute solar radiation: absorbed & reflected by the ground.
   subroutine radiation_glacier (dt      ,tg      ,sneqvo  ,sneqv   ,cosz   , & !in
                                 qsnow   ,solad   ,solai   ,                  & !in
                                 albold  ,tauss   ,                           & !inout
@@ -996,7 +1032,9 @@ contains
                            zlvl      ,zpd     ,qair    ,sfctmp  ,rhoair  ,sfcprs  ,       & !in
                            ur        ,gamma   ,rsurf   ,lwdn    ,rhsur   ,smc     ,       & !in
                            eair      ,stc     ,sag     ,snowh   ,lathea  ,sh2o    ,       & !in
-                           thsfc_loc ,prslkix ,prsik1x ,prslk1x ,sigmaf1 ,garea1  ,       & !in
+                           thsfc_loc ,prslkix ,prsik1x ,prslk1x ,                         &
+                           psfc      ,pblhx   ,iz0tlnd ,itime   ,uu      ,vv     ,        &
+                           sigmaf1   ,garea1  ,psi_opt ,ep_1, ep_2, cp,                   & !in
 #ifdef CCPP
                            cm        ,ch      ,tgb     ,qsfc    ,errmsg  ,errflg  ,       & !inout
 #else
@@ -1019,6 +1057,8 @@ contains
 ! input
   integer, intent(in)                                          :: nsnow  !< maximum no. of snow layers        
   integer, intent(in)                                          :: nsoil  !< number of soil layers
+  integer, intent(in)                                          :: psi_opt
+
   real (kind=kind_phys),                            intent(in) :: emg    !< ground emissivity
   integer,                                          intent(in) :: isnow  !< actual no. of snow layers
   real (kind=kind_phys), dimension(-nsnow+1:nsoil), intent(in) :: df     !< thermal conductivity of snow/soil (w/m/k)
@@ -1047,6 +1087,17 @@ contains
   real (kind=kind_phys),                            intent(in) :: prslkix ! in exner function
   real (kind=kind_phys),                            intent(in) :: prsik1x ! in exner function
   real (kind=kind_phys),                            intent(in) :: prslk1x ! in exner function
+
+  real (kind=kind_phys)                        , intent(in)    :: pblhx   !<
+  real (kind=kind_phys)                        , intent(in)    :: psfc    !<
+  real (kind=kind_phys)                        , intent(in)    :: ep_1 
+  real (kind=kind_phys)                        , intent(in)    :: ep_2 
+  real (kind=kind_phys)                        , intent(in)    :: cp 
+  integer                                      , intent(in)    :: iz0tlnd !<
+  integer                                      , intent(in)    :: itime   !< integration time
+  real (kind=kind_phys)                        , intent(in)    :: uu      !<
+  real (kind=kind_phys)                        , intent(in)    :: vv      !<
+
   real (kind=kind_phys),                            intent(in) :: sigmaf1 ! 
   real (kind=kind_phys),                            intent(in) :: garea1  ! 
 
@@ -1094,10 +1145,18 @@ contains
   integer                  :: iter    !< iteration index
   real (kind=kind_phys)    :: z0h     !< roughness length, sensible heat, ground (m)
 
+  real (kind=kind_phys)    :: qfx
+  real (kind=kind_phys)    :: cq2     !< surface exchange at 2m
+
+
   real(kind=kind_phys)     :: rb1i    !  bulk richardson #
   real(kind=kind_phys)     :: fm10i   !  fm10 over land ice
 
   real(kind=kind_phys)     :: stress1i!  wind stress m2 S-2
+
+  real(kind=kind_phys)     :: wspd1i
+  real(kind=kind_phys)     :: flhc1i
+  real(kind=kind_phys)     :: flqc1i
 
   real(kind=kind_phys)     :: tv1i    ! virtual potential temp @ ref level
 
@@ -1129,8 +1188,10 @@ contains
   real (kind=kind_phys)    :: b       !< temporary calculation
   real (kind=kind_phys)    :: t, tdc  !< kelvin to degree celsius with limit -50 to +50
   real (kind=kind_phys), dimension(       1:nsoil) :: sice   !< soil ice
+  real (kind=kind_phys) :: czil        !< calculate roughness length of heat
 
   tdc(t)   = min( 50., max(-50.,(t-tfrz)) )
+        czil=0.1
 
 ! -----------------------------------------------------------------
 ! initialization variables that do not depend on stability iteration
@@ -1146,6 +1207,10 @@ contains
 
         h      = 0.
 
+        fh2    = 0.
+        qfx    = 0.
+
+
 ! the following only applies to opt_sfc =3, opt_sfc = 1 still done its old way
 
         snwd      = snowh*1000.0
@@ -1155,10 +1220,18 @@ contains
         fv     = ur*vkc/log(zlvli/z0m)
         reyni  = fv*z0m/(1.5e-05)                         !introduction of fv dependent z0h for the iter 
 
-        if (reyni .gt. 2.0) then 
-            z0h = z0m/exp(2.46*(reyni)**0.25 - log(7.4))  !Brutsaert 1982 
-         else 
-            z0h = z0m/exp(-log(0.397))                    !Brusaert 1982, table 4
+        if (opt_trs == 1) then
+           z0h  = z0m
+        elseif (opt_trs == 2) then
+           z0h = z0m*exp(-czil*0.4*258.2*sqrt(fv*z0m))
+        elseif (opt_trs == 3) then
+           z0h = z0m*0.1
+        elseif (opt_trs == 4) then
+         if (reyni .gt. 2.0) then 
+             z0h = z0m/exp(2.46*(reyni)**0.25 - log(7.4))  !Brutsaert 1982 
+          else 
+             z0h = z0m/exp(-log(0.397))                    !Brusaert 1982, table 4
+         endif
         endif
 
         z0h_total = z0h
@@ -1183,8 +1256,10 @@ contains
             tem2 = max(sigmaf1, 0.1_kind_phys)
             zvfun1= sqrt(tem1 * tem2)
             gdx=sqrt(garea1)
-     if(opt_sfc == 1 .or. opt_sfc == 2) then              !Add option for sfc scheme,use '1' for both '1'/'2'
+
+     if(opt_sfc == 1 .or. opt_sfc == 2 .or. opt_sfc == 4) then      !Add option for sfc scheme,use '1' for both '1'/'2'
       loop3: do iter = 1, niterb  ! begin stability iteration
+        if(opt_sfc == 1 .or. opt_sfc == 2) then
 
 !       for now, only allow sfcdif1 until others can be fixed
 
@@ -1200,8 +1275,45 @@ contains
 #ifdef CCPP
         if (errflg /= 0) return
 #endif
-        ramb = max(1.,1./(cm*ur))
-        rahb = max(1.,1./(ch*ur))
+        endif
+
+         if(opt_sfc == 4) then
+
+          call sfcdif4(1  ,1  ,uu    ,vv    ,sfctmp ,       & !allow location for use in the driver
+                      sfcprs ,psfc  ,pblhx  ,gdx   ,z0m  ,  &
+                      ep_1, ep_2, cp,                       &
+                      itime  ,snwd  ,1      ,psi_opt,       &
+                      tgb   ,qair   ,zlvl  ,iz0tlnd,qsfc ,  &  ! use zlvli?
+                      h     ,qfx    ,cm    ,ch     ,ch2  ,  &  ! ch2 = cq2 most of times
+                      cq2   ,moz    ,fv    ,rb1i, fm, fh,   &
+                     stress1i,fm10i  ,fh2  , wspd1i ,flhc1i ,flqc1i) ! some are for use in the driver call
+
+
+        ! Undo the multiplication by windspeed that SFCDIF4
+          ! applies to exchange coefficients CH and CM:
+
+          ch   = ch / wspd1i
+          cm   = cm / wspd1i
+          ch2  = ch2 / wspd1i
+          cq2  = cq2 / wspd1i
+
+          if(snwd > 0.) then
+             cm = min(0.01,cm)
+             ch = min(0.01,ch)
+             ch2 = min(0.01,ch2)
+             cq2 = min(0.01,cq2)
+          end if
+
+         endif ! 4
+
+        if(opt_sfc == 1 .or.  opt_sfc == 2 .or.  opt_sfc == 3) then
+          ramb = max(1.,1./(cm*ur))
+          rahb = max(1.,1./(ch*ur))
+        elseif(opt_sfc == 4) then
+          ramb = max(1.,1./(cm*wspd1i) )
+          rahb = max(1.,1./(ch*wspd1i) )
+        endif
+
         rawb = rahb
 
 ! es and d(es)/dt evaluated at tg
@@ -1253,6 +1365,7 @@ contains
             estg  = esati
         end if
         qsfc = 0.622*(estg*rhsur)/(sfcprs-0.378*(estg*rhsur))
+        qfx = (qsfc-qair)*cev*gamma/cpair
 
      end do loop3 ! end stability iteration
    end if
@@ -1351,6 +1464,12 @@ contains
 ! 2m air temperature
      ehb2  = fv*vkc/(log((2.+z0h)/z0h)-fh2)
      cq2b  = ehb2
+
+     if (opt_sfc == 4) then
+       ehb2 = ch2 * wspd1i ! need conductance,z0h from sfcdif4 
+       cq2b = cq2 * wspd1i ! conductance
+     endif
+
      if (ehb2.lt.1.e-5 ) then
        t2mb  = tgb
        q2b   = qsfc
@@ -2719,6 +2838,7 @@ end if   ! opt_gla == 1
            ! the change in dz due to compaction
 
            dzsnso(j) = dzsnso(j)*(1.+pdzdtc)
+           dzsnso(j) = min(max(dzsnso(j),(snliq(j)+snice(j))/500.0),(snliq(j)+snice(j))/50.0)  ! limit adjustment to a reasonable density
         end if
 
         ! pressure of overlying snow
@@ -3328,7 +3448,9 @@ end if   ! opt_gla == 1
 ! ==================================================================================================
 
 !>\ingroup NoahMP_LSM
-  subroutine noahmp_options_glacier(iopt_alb  ,iopt_snf  ,iopt_tbot, iopt_stc, iopt_gla, iopt_sfc)
+!!
+  subroutine noahmp_options_glacier(iopt_alb  ,iopt_snf  ,iopt_tbot, iopt_stc, iopt_gla,&
+                                    iopt_sfc, iopt_trs)
 
   implicit none
 
@@ -3339,6 +3461,7 @@ end if   ! opt_gla == 1
                                     !! 1 -> semi-implicit; 2 -> full implicit (original noah)
   integer,  intent(in) :: iopt_gla  !< glacier option (1->phase change; 2->simple)
   integer,  intent(in) :: iopt_sfc  !< sfc scheme option
+  integer,  intent(in) :: iopt_trs  !< thermal roughness option
 
 ! -------------------------------------------------------------------------------------------------
 
@@ -3348,6 +3471,7 @@ end if   ! opt_gla == 1
   opt_stc  = iopt_stc
   opt_gla  = iopt_gla
   opt_sfc  = iopt_sfc
+  opt_trs  = iopt_trs
   
   end subroutine noahmp_options_glacier
  

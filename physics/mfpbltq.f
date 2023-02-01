@@ -2,8 +2,9 @@
 !! This file contains the subroutine that calculates mass flux and
 !! updraft parcel properties for thermals driven by surface heating 
 !! for use in the TKE-EDMF PBL scheme (updated version).
-
-!>\ingroup satmedmfvdifq
+      module mfpbltq_mod
+      contains
+!>\ingroup module_satmedmfvdifq
 !! This subroutine computes mass flux and updraft parcel properties for
 !! thermals driven by surface heating. 
 !!\section mfpbltq_gen GFS mfpblt General Algorithm 
@@ -11,7 +12,7 @@
       subroutine mfpbltq(im,ix,km,kmpbl,ntcw,ntrac1,delt,
      &   cnvflg,zl,zm,q1,t1,u1,v1,plyr,pix,thlx,thvx,
      &   gdx,hpbl,kpbl,vpert,buo,xmf,
-     &   tcko,qcko,ucko,vcko,xlamue,a1)
+     &   tcko,qcko,ucko,vcko,xlamueq,a1)
 !
       use machine , only : kind_phys
       use funcphys , only : fpvs
@@ -35,14 +36,15 @@
      &                     buo(im,km), xmf(im,km),
      &                     tcko(im,km),qcko(im,km,ntrac1),
      &                     ucko(im,km),vcko(im,km),
-     &                     xlamue(im,km-1)
+     &                     xlamueq(im,km-1)
 !
 c  local variables and arrays
 !
       integer   i, j, k, n, ndc
       integer   kpblx(im), kpbly(im)
 !
-      real(kind=kind_phys) dt2,     dz,      ce0,     cm,
+      real(kind=kind_phys) dt2,     dz,      ce0,
+     &                     cm,      cq,
      &                     factor,  gocp,
      &                     g,       b1,      f1,
      &                     bb1,     bb2,
@@ -56,7 +58,7 @@ c  local variables and arrays
      &                     thup,    thvu,    dq
 !
       real(kind=kind_phys) rbdn(im), rbup(im), hpblx(im),
-     &                     xlamuem(im,km-1)
+     &                     xlamue(im,km-1), xlamuem(im,km-1)
       real(kind=kind_phys) delz(im), xlamax(im)
 !
       real(kind=kind_phys) wu2(im,km), thlu(im,km),
@@ -71,7 +73,7 @@ c  local variables and arrays
       parameter(g=grav)
       parameter(gocp=g/cp)
       parameter(elocp=hvap/cp,el2orc=hvap*hvap/(rv*cp))
-      parameter(ce0=0.4,cm=1.0)
+      parameter(ce0=0.4,cm=1.0,cq=1.3)
       parameter(qmin=1.e-8,qlmin=1.e-12)
       parameter(alp=1.5,vpertmax=3.0,pgcon=0.55)
       parameter(b1=0.5,f1=0.15)
@@ -132,6 +134,7 @@ c  local variables and arrays
               xlamue(i,k) = xlamax(i)
             endif
 !
+            xlamueq(i,k) = cq * xlamue(i,k)
             xlamuem(i,k) = cm * xlamue(i,k)
           endif
         enddo
@@ -148,6 +151,9 @@ c  local variables and arrays
 !
             thlu(i,k) = ((1.-tem)*thlu(i,k-1)+tem*
      &                  (thlx(i,k-1)+thlx(i,k)))/factor
+!
+            tem  = 0.5 * xlamueq(i,k-1) * dz
+            factor = 1. + tem
             qtu(i,k) = ((1.-tem)*qtu(i,k-1)+tem*
      &                  (qtx(i,k-1)+qtx(i,k)))/factor
 !
@@ -282,6 +288,7 @@ c  local variables and arrays
               xlamue(i,k) = xlamax(i)
             endif
 !
+            xlamueq(i,k) = cq * xlamue(i,k)
             xlamuem(i,k) = cm * xlamue(i,k)
           endif
         enddo
@@ -384,6 +391,9 @@ c  local variables and arrays
 !
             thlu(i,k) = ((1.-tem)*thlu(i,k-1)+tem*
      &                  (thlx(i,k-1)+thlx(i,k)))/factor
+!
+            tem  = 0.5 * xlamueq(i,k-1) * dz
+            factor = 1. + tem
             qtu(i,k) = ((1.-tem)*qtu(i,k-1)+tem*
      &                  (qtx(i,k-1)+qtx(i,k)))/factor
 !
@@ -432,7 +442,7 @@ c  local variables and arrays
         do i = 1, im
           if (cnvflg(i) .and. k <= kpbl(i)) then
              dz   = zl(i,k) - zl(i,k-1)
-             tem  = 0.5 * xlamue(i,k-1) * dz
+             tem  = 0.5 * xlamueq(i,k-1) * dz
              factor = 1. + tem
 ! 
              qcko(i,k,n) = ((1.-tem)*qcko(i,k-1,n)+tem*
@@ -453,7 +463,7 @@ c  local variables and arrays
         do i = 1, im
           if (cnvflg(i) .and. k <= kpbl(i)) then
              dz   = zl(i,k) - zl(i,k-1)
-             tem  = 0.5 * xlamue(i,k-1) * dz
+             tem  = 0.5 * xlamueq(i,k-1) * dz
              factor = 1. + tem
 ! 
              qcko(i,k,n) = ((1.-tem)*qcko(i,k-1,n)+tem*
@@ -468,3 +478,4 @@ c  local variables and arrays
       return
       end
 !> @}
+      end module mfpbltq_mod

@@ -144,6 +144,13 @@
   dimensions = ()
   type = logical
   intent = in
+[merra2_aerosol_aware]
+  standard_name = do_merra2_aerosol_awareness
+  long_name = flag for merra2 aerosol-aware physics for example the thompson microphysics
+  units = flag
+  dimensions = ()
+  type = logical
+  intent = in
 [nc]
   standard_name = mass_number_concentration_of_cloud_liquid_water_particles_in_air
   long_name = cloud droplet number concentration
@@ -216,6 +223,14 @@
   type = real
   kind = kind_phys
   intent = in
+[aerfld]
+  standard_name = mass_mixing_ratio_of_aerosol_from_gocart_or_merra2
+  long_name = mass mixing ratio of aerosol from gocart or merra2
+  units = kg kg-1
+  dimensions = (horizontal_dimension,vertical_layer_dimension,number_of_aerosol_tracers_MG)
+  type = real
+  kind = kind_phys
+  intent = in
 [mpicomm]
   standard_name = mpi_communicator
   long_name = MPI communicator
@@ -268,9 +283,9 @@
   kind = len=*
   intent = out
 [errflg]
-  standard_name = ccpp_error_flag
-  long_name = error flag for error handling in CCPP
-  units = flag
+  standard_name = ccpp_error_code
+  long_name = error code for error handling in CCPP
+  units = 1
   dimensions = ()
   type = integer
   intent = out
@@ -395,6 +410,13 @@
   dimensions = ()
   type = logical
   intent = in
+[merra2_aerosol_aware]
+  standard_name = do_merra2_aerosol_awareness
+  long_name = flag for merra2 aerosol-aware physics for example the thompson microphysics
+  units = flag
+  dimensions = ()
+  type = logical
+  intent = in
 [nc]
   standard_name = mass_number_concentration_of_cloud_liquid_water_particles_in_air_of_new_state
   long_name = cloud droplet number concentration
@@ -434,6 +456,13 @@
   dimensions = (horizontal_loop_extent)
   type = real
   kind = kind_phys
+  intent = in
+[aero_ind_fdb]
+  standard_name = do_smoke_aerosol_indirect_feedback
+  long_name = flag for wfa ifa emission indirect feedback
+  units = flag
+  dimensions = ()
+  type = logical
   intent = in
 [tgrs]
   standard_name = air_temperature_of_new_state
@@ -479,6 +508,13 @@
   long_name = deformed CFL factor
   units = count 
   dimensions = ()
+  type = integer
+  intent = in
+[islmsk]
+  standard_name = sea_land_ice_mask
+  long_name = sea/land/ice mask (=0/1/2)
+  units = flag
+  dimensions = (horizontal_loop_extent)
   type = integer
   intent = in
 [dtp]
@@ -588,6 +624,14 @@
   dimensions = ()
   type = logical
   intent = in
+[aerfld]
+  standard_name = mass_mixing_ratio_of_aerosol_from_gocart_or_merra2
+  long_name = mass mixing ratio of aerosol from gocart or merra2
+  units = kg kg-1
+  dimensions = (horizontal_loop_extent,vertical_layer_dimension,number_of_aerosol_tracers_MG)
+  type = real
+  kind = kind_phys
+  intent = in
 [mpicomm]
   standard_name = mpi_communicator
   long_name = MPI communicator
@@ -638,6 +682,74 @@
   dimensions = ()
   type = logical
   intent = in
+[spp_wts_mp]
+  standard_name = spp_weights_for_microphysics_scheme
+  long_name = spp weights for microphysics scheme
+  units = 1
+  dimensions = (horizontal_loop_extent,vertical_layer_dimension)
+  type = real
+  intent = in
+[spp_mp]
+  standard_name = control_for_microphysics_spp_perturbations
+  long_name = control for microphysics spp perturbations
+  units = count
+  dimensions = ()
+  type = integer
+  intent = in
+[n_var_spp]
+  standard_name = number_of_perturbed_spp_schemes
+  long_name = number of perturbed spp schemes
+  units = count
+  dimensions = ()
+  type = integer
+  intent = in
+[spp_prt_list]
+  standard_name = magnitude_of_spp_perturbations
+  long_name = magnitude of spp perturbations
+  units = 1
+  dimensions = (number_of_perturbed_spp_schemes)
+  type = real
+  kind = kind_phys
+  intent = in
+[spp_stddev_cutoff]
+  standard_name = magnitude_of_spp_standard_deviation_cutoff
+  long_name = magnitude of spp standard deviation cutoff
+  units = 1
+  dimensions = (number_of_perturbed_spp_schemes)
+  type = real
+  kind = kind_phys
+  intent = in
+[spp_var_list]
+  standard_name = perturbed_spp_schemes
+  long_name = perturbed spp schemes
+  units = none
+  dimensions = (number_of_perturbed_spp_schemes)
+  type = character
+  kind = len=3
+  intent = in
+[cplchm]
+  standard_name = flag_for_chemistry_coupling
+  long_name = flag controlling cplchm collection (default off)
+  units = flag
+  dimensions = ()
+  type = logical
+  intent = in
+[pfi_lsan]
+  standard_name = ice_flux_due_to_large_scale_precipitation
+  long_name = instantaneous 3D flux of ice from nonconvective precipitation
+  units = kg m-2 s-1
+  dimensions = (horizontal_loop_extent,vertical_layer_dimension)
+  type = real
+  kind = kind_phys
+  intent = inout
+[pfl_lsan]
+  standard_name = liquid_flux_due_to_large_scale_precipitation
+  long_name = instantaneous 3D flux of liquid water from nonconvective precipitation
+  units = kg m-2 s-1
+  dimensions = (horizontal_loop_extent,vertical_layer_dimension)
+  type = real
+  kind = kind_phys
+  intent = inout
 [errmsg]
   standard_name = ccpp_error_message
   long_name = error message for error handling in CCPP
@@ -647,9 +759,9 @@
   kind = len=*
   intent = out
 [errflg]
-  standard_name = ccpp_error_flag
-  long_name = error flag for error handling in CCPP
-  units = flag
+  standard_name = ccpp_error_code
+  long_name = error code for error handling in CCPP
+  units = 1
   dimensions = ()
   type = integer
   intent = out
@@ -667,9 +779,9 @@
   kind = len=*
   intent = out
 [errflg]
-  standard_name = ccpp_error_flag
-  long_name = error flag for error handling in CCPP
-  units = flag
+  standard_name = ccpp_error_code
+  long_name = error code for error handling in CCPP
+  units = 1
   dimensions = ()
   type = integer
   intent = out

@@ -1,7 +1,7 @@
 [ccpp-table-properties]
   name = m_micro
   type = scheme
-  dependencies = aer_cloud.F,aerclm_def.F,cldmacro.F,cldwat2m_micro.F,machine.F,micro_mg_utils.F90,micro_mg2_0.F90,micro_mg3_0.F90,physcons.F90,wv_saturation.F
+  dependencies = aer_cloud.F,aerclm_def.F,cldmacro.F,cldwat2m_micro.F,machine.F,micro_mg_utils.F90,micro_mg2_0.F90,micro_mg3_0.F90,physcons.F90,wv_saturation.F,machine.F
 
 ########################################################################
 [ccpp-arg-table]
@@ -289,9 +289,9 @@
   kind = len=*
   intent = out
 [errflg]
-  standard_name = ccpp_error_flag
-  long_name = error flag for error handling in CCPP
-  units = flag
+  standard_name = ccpp_error_code
+  long_name = error code for error handling in CCPP
+  units = 1
   dimensions = ()
   type = integer
   intent = out
@@ -735,9 +735,9 @@
   type = integer
   intent = in
 [aerfld_i]
-  standard_name = mass_number_concentration_of_aerosol_from_gocart_climatology
-  long_name = GOCART aerosol climatology number concentration
-  units = kg-1
+  standard_name = mass_mixing_ratio_of_aerosol_from_gocart_or_merra2
+  long_name = mass mixing ratio of aerosol from gocart or merra2
+  units = kg kg-1
   dimensions = (horizontal_loop_extent,vertical_layer_dimension,number_of_aerosol_tracers_MG)
   type = real
   kind = kind_phys
@@ -835,9 +835,9 @@
   kind = len=*
   intent = out
 [errflg]
-  standard_name = ccpp_error_flag
-  long_name = error flag for error handling in CCPP
-  units = flag
+  standard_name = ccpp_error_code
+  long_name = error code for error handling in CCPP
+  units = 1
   dimensions = ()
   type = integer
   intent = out
