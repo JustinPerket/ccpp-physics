@@ -18,23 +18,20 @@ contains
 !!
    subroutine GFS_surface_composites_inter_run (im, dry, icy, wet, semis_wat, semis_lnd, semis_ice, &
                                                 adjsfcdlw, gabsbdlw_lnd, gabsbdlw_ice, gabsbdlw_wat,&
-                                                adjsfcusw, adjsfcdsw, adjsfcnsw,                    &
-                                                dlwflx_cpl, & ! JP add
-                                                errmsg, errflg)
+                                                adjsfcusw, adjsfcdsw, adjsfcnsw, use_lake_model, errmsg, errflg)
 
       implicit none
 
       ! Interface variables
       integer,                            intent(in   ) :: im
-      logical,              dimension(:), intent(in   ) :: dry, icy, wet
+      logical,              dimension(:), intent(in   ) :: dry, icy
+      logical,              dimension(:), intent(inout) :: wet
       real(kind=kind_phys), dimension(:), intent(in   ) :: semis_wat, semis_lnd, semis_ice,  &
                                                            adjsfcdlw, adjsfcdsw, adjsfcnsw
       real(kind=kind_phys), dimension(:), intent(inout) :: gabsbdlw_lnd, gabsbdlw_ice, gabsbdlw_wat
       real(kind=kind_phys), dimension(:), intent(out)   :: adjsfcusw
+      integer, dimension(:), intent(in) :: use_lake_model
 
-      ! JP add
-      real(kind=kind_phys), dimension(im),  intent(out)  :: dlwflx_cpl
-      
       ! CCPP error handling
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
