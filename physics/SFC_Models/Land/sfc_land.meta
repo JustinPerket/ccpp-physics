@@ -235,8 +235,8 @@
   intent = in
   optional = True
 [evap_lnd]
-  standard_name = surface_upward_latent_heat_flux_over_land_from_land
-  long_name = sfc latent heat flux input over land for coupling
+  standard_name = kinematic_surface_upward_latent_heat_flux_over_land
+  long_name = kinematic sfc latent heat flux input over land for coupling
   units = kg kg-1 m s-1
   dimensions = (horizontal_loop_extent)
   type = real
@@ -244,8 +244,8 @@
   intent = in
   optional = True
 [hflx_lnd]
-  standard_name = surface_upward_sensible_heat_flux_over_land_from_land
-  long_name = sfc sensible heat flux input over land for coupling
+  standard_name = kinematic_surface_upward_sensible_heat_flux_over_land
+  long_name = kinematic sfc sensible heat flux input over land for coupling
   units = K m s-1
   dimensions = (horizontal_loop_extent)
   type = real
