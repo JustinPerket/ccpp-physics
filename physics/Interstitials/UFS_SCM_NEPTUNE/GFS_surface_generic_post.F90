@@ -151,7 +151,17 @@
           enddo
         endif
 
-        if (cplflx .or. cpllm4) then
+        if (cpllm4) then
+          do i=1,im
+            if (dry(i)) then
+              dnirbmi_cpl (i) = adjnirbmd(i)
+              dnirdfi_cpl (i) = adjnirdfd(i)
+              dvisbmi_cpl (i) = adjvisbmd(i)
+              dvisdfi_cpl (i) = adjvisdfd(i)
+            endif 
+          enddo
+        endif
+        if (cplflx) then
           do i=1,im
             dnirbmi_cpl (i) = adjnirbmd(i)
             dnirdfi_cpl (i) = adjnirdfd(i)
