@@ -11,9 +11,7 @@ module rrtmgp_lw_gas_optics
   use mo_gas_concentrations, only: ty_gas_concs  
   use radiation_tools,       only: check_error_msg
   use netcdf
-#ifdef MPI
   use mpi_f08
-#endif
 
   implicit none
 
@@ -74,7 +72,7 @@ contains
 
 !>
   subroutine rrtmgp_lw_gas_optics_init(rrtmgp_root_dir, rrtmgp_lw_file_gas,                 &
-       active_gases_array, mpicomm, mpirank, mpiroot, errmsg, errflg)
+       active_gases_array, mpicomm, mpirank, mpiroot1, errmsg, errflg)
 
     ! Inputs
     character(len=128),intent(in) :: &
@@ -86,8 +84,9 @@ contains
          mpicomm             !< MPI communicator
     integer,intent(in) :: &
          mpirank,          & !< Current MPI rank
-         mpiroot             !< Master MPI rank
- 
+         mpiroot1            !< Master MPI rank
+    integer :: mpiroot
+
     ! Outputs
     character(len=*), intent(out) :: &
          errmsg              !< CCPP error message
@@ -104,6 +103,7 @@ contains
     errmsg = ''
     errflg = 0
 
+    mpiroot = 0
     ! Filenames are set in the physics_nml
     lw_gas_props_file  = trim(rrtmgp_root_dir)//trim(rrtmgp_lw_file_gas)
 
@@ -113,9 +113,7 @@ contains
     ! (ONLY master processor(0), if MPI enabled)
     !
     ! #######################################################################################
-#ifdef MPI
     if (mpirank .eq. mpiroot) then
-#endif
        write (*,*) 'Reading RRTMGP longwave k-distribution metadata ... '
 
        ! Open file
@@ -154,7 +152,6 @@ contains
        status = nf90_inquire_dimension(ncid, dimid, len = nminor_absorber_intervals_upperLW)
        status = nf90_inq_dimid(ncid, 'temperature_Planck', dimid)
        status = nf90_inquire_dimension(ncid, dimid, len = ninternalSourcetempsLW)
-#ifdef MPI
     endif ! On master processor
 
     ! Other processors waiting...
@@ -182,7 +179,6 @@ contains
     call mpi_bcast(ncontributors_lowerLW,             1, MPI_INTEGER, mpiroot, mpicomm, mpierr)
     call mpi_bcast(ncontributors_upperLW,             1, MPI_INTEGER, mpiroot, mpicomm, mpierr)
     call mpi_bcast(nfit_coeffsLW,                     1, MPI_INTEGER, mpiroot, mpicomm, mpierr)
-#endif
 
     ! Allocate space for arrays
     if (.not. allocated(gas_namesLW))                       &
@@ -254,9 +250,7 @@ contains
     ! (ONLY master processor(0), if MPI enabled) 
     !
     ! #######################################################################################
-#ifdef MPI
     if (mpirank .eq. mpiroot) then
-#endif
        write (*,*) 'Reading RRTMGP longwave k-distribution data ... '
        status = nf90_inq_varid(ncid, 'gas_names', varID)
        status = nf90_get_var(  ncid, varID, gas_namesLW)
@@ -334,7 +328,6 @@ contains
           if (temp4(ii) .eq. 0) scale_by_complement_upperLW(ii)       = .false.
           if (temp4(ii) .eq. 1) scale_by_complement_upperLW(ii)       = .true.
        enddo
-#ifdef MPI
     endif ! Master process
 
     ! Other processors waiting...
@@ -452,7 +445,6 @@ contains
          size(scale_by_complement_upperLW),        MPI_LOGICAL,    mpiroot, mpicomm, mpierr)
 
     call mpi_barrier(mpicomm, mpierr)
-#endif
 
     ! #######################################################################################
     !   

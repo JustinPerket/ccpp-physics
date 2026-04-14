@@ -27,13 +27,13 @@
         ntss3, ntss4, ntss5, ntsu, ntbcb, ntbcl, ntocb, ntocl, ntchm,          &
         imp_physics,imp_physics_nssl, nssl_ccn_on, nssl_invertccn,             &
         imp_physics_thompson, imp_physics_tempo, imp_physics_gfdl,             &
-        imp_physics_zhao_carr,                                                 &
-        imp_physics_zhao_carr_pdf, imp_physics_mg, imp_physics_wsm6,           &
+        imp_physics_mg, imp_physics_wsm6,                                      &
         imp_physics_fer_hires, iovr, iovr_rand, iovr_maxrand, iovr_max,        &
         iovr_dcorr, iovr_exp, iovr_exprand, idcor, idcor_con, idcor_hogan,     &
         idcor_oreopoulos, dcorr_con, julian, yearlen, lndp_var_list, lsswr,    &
         lslwr, ltaerosol, mraerosol, lgfdlmprad, uni_cld, effr_in, do_mynnedmf,&
-        lmfshal, lcnorm, lmfdeep2, lcrick, fhswr, fhlwr, solhr, sup, con_eps,  &
+        lmfshal, lcnorm, lmfdeep2, lcrick, fhswr, fhlwr, solhr, sup, xr_con,   &
+        xr_exp, con_eps,                                                       &
         epsm1, fvirt, rog, rocp, con_rd, xlat_d, xlat, xlon, coslat, sinlat,   &
         tsfc, slmsk, prsi, prsl, prslk, tgrs, sfc_wts, mg_cld, effrr_in,       &
         pert_clds, sppt_wts, sppt_amp, cnvw_in, cnvc_in, qgrs, aer_nm, dx,     &
@@ -73,19 +73,19 @@
       use surface_perturbation,      only: cdfnor,ppfbet
 
       ! For Thompson MP
-      use module_mp_thompson,        only: calc_effectRad_thmpsn     => calc_effectRad, &
-                                           Nt_c_l_thmpsn             => Nt_c_l,         &
-                                           Nt_c_o_thmpsn             => Nt_c_o,         &
-                                           re_qc_min_thmpsn          => re_qc_min,      &
-                                           re_qc_max_thmpsn          => re_qc_max,      &
-                                           re_qi_min_thmpsn          => re_qi_min,      &
-                                           re_qi_max_thmpsn          => re_qi_max,      &
-                                           re_qs_min_thmpsn          => re_qs_min,      &
-                                           re_qs_max_thmpsn          => re_qs_max
+      use module_mp_thompson,        only: calc_effectRad_thompson     => calc_effectRad, &
+                                           Nt_c_l_thompson             => Nt_c_l,         &
+                                           Nt_c_o_thompson             => Nt_c_o,         &
+                                           re_qc_min_thompson          => re_qc_min,      &
+                                           re_qc_max_thompson          => re_qc_max,      &
+                                           re_qi_min_thompson          => re_qi_min,      &
+                                           re_qi_max_thompson          => re_qi_max,      &
+                                           re_qs_min_thompson          => re_qs_min,      &
+                                           re_qs_max_thompson          => re_qs_max
       use module_mp_thompson_make_number_concentrations, only:       &
-                                           make_IceNumber_thmpsn     => make_IceNumber,     &
-                                           make_DropletNumber_thmpsn => make_DropletNumber, &
-                                           make_RainNumber_thmpsn    => make_RainNumber
+                                           make_IceNumber_thompson     => make_IceNumber,     &
+                                           make_DropletNumber_thompson => make_DropletNumber, &
+                                           make_RainNumber_thompson    => make_RainNumber
 
       use module_mp_tempo_params, only: &
            ty_tempo_cfg, &
@@ -123,8 +123,6 @@
                                            imp_physics_thompson,               &
                                            imp_physics_tempo,                  &
                                            imp_physics_gfdl,                   &
-                                           imp_physics_zhao_carr,              &
-                                           imp_physics_zhao_carr_pdf,          &
                                            imp_physics_mg, imp_physics_wsm6,   &
                                            imp_physics_nssl,                   &
                                            imp_physics_fer_hires,              &
@@ -159,7 +157,7 @@
       integer,              intent(in) :: spp_rad
       real(kind_phys),      intent(in), optional :: spp_wts_rad(:,:)
 
-      real(kind=kind_phys), intent(in) :: fhswr, fhlwr, solhr, sup, julian, sppt_amp, dcorr_con
+      real(kind=kind_phys), intent(in) :: fhswr, fhlwr, solhr, sup, julian, sppt_amp, dcorr_con, xr_con, xr_exp
       real(kind=kind_phys), intent(in) :: con_eps, epsm1, fvirt, rog, rocp, con_rd, con_pi, con_g, con_ttp, con_thgni
 
       real(kind=kind_phys), dimension(:), intent(in) :: xlat_d, xlat, xlon,    &
@@ -724,7 +722,7 @@
 
 !      if (ntcw > 0) then                            ! prognostic cloud schemes
         ccnd = 0.0_kind_phys
-        if (ncnd == 1) then                          ! Zhao_Carr_Sundqvist
+        if (ncnd == 1) then                          
           do k=1,LMK
             do i=1,IM
               ccnd(i,k,1) = tracer1(i,k,ntcw)        ! liquid water/ice
@@ -792,13 +790,13 @@
                 qs_mp (i,k) = tracer1(i,k,ntsw)/(1.-qvs)
                 if(nint(slmsk(i)) == 1) then
                    if (imp_physics == imp_physics_thompson) then
-                      nc_mp (i,k) = Nt_c_l_thmpsn*orho(i,k)
+                      nc_mp (i,k) = Nt_c_l_thompson*orho(i,k)
                    else
                       nc_mp (i,k) = Nt_c_l_tempo*orho(i,k)
                    endif
                 else
                    if (imp_physics == imp_physics_thompson) then
-                      nc_mp (i,k) = Nt_c_o_thmpsn*orho(i,k)
+                      nc_mp (i,k) = Nt_c_o_thompson*orho(i,k)
                    else
                       nc_mp (i,k) = Nt_c_o_tempo*orho(i,k)
                    endif
@@ -923,14 +921,14 @@
             do i=1,im
                if ((ltaerosol .or. mraerosol) .and. qc_mp(i,k)>1.e-12 .and. nc_mp(i,k)<100.) then
                   if (imp_physics == imp_physics_thompson) then
-                     nc_mp(i,k) = make_DropletNumber_thmpsn(qc_mp(i,k)*rho(i,k), nwfa(i,k)*rho(i,k)) * orho(i,k)
+                     nc_mp(i,k) = make_DropletNumber_thompson(qc_mp(i,k)*rho(i,k), nwfa(i,k)*rho(i,k)) * orho(i,k)
                   else
                      nc_mp(i,k) = make_DropletNumber_tempo(qc_mp(i,k)*rho(i,k), nwfa(i,k)*rho(i,k)) * orho(i,k)
                   endif
               endif
               if (qi_mp(i,k)>1.e-12 .and. ni_mp(i,k)<100.) then
                  if (imp_physics == imp_physics_thompson) then
-                    ni_mp(i,k) = make_IceNumber_thmpsn(qi_mp(i,k)*rho(i,k), tlyr(i,k)) * orho(i,k)
+                    ni_mp(i,k) = make_IceNumber_thompson(qi_mp(i,k)*rho(i,k), tlyr(i,k)) * orho(i,k)
                  else
                     ni_mp(i,k) = make_IceNumber_tempo(qi_mp(i,k)*rho(i,k), tlyr(i,k)) * orho(i,k)
                  endif
@@ -946,18 +944,18 @@
             !     it will raise the low limit from 5 to 10, but the high limit will remain 125.
 
             if (imp_physics == imp_physics_thompson) then
-               call calc_effectRad_thmpsn(tlyr(i,:), plyr(i,:)*100., qv_mp(i,:), qc_mp(i,:),   &
+               call calc_effectRad_thompson(tlyr(i,:), plyr(i,:)*100., qv_mp(i,:), qc_mp(i,:),   &
                     nc_mp(i,:), qi_mp(i,:), ni_mp(i,:), qs_mp(i,:), &
                     effrl(i,:), effri(i,:), effrs(i,:), islmsk, 1, lm )
                ! Scale Thompson's effective radii from meter to micron
                do k=1,lm
-                  effrl(i,k) = MAX(re_qc_min_thmpsn, MIN(effrl(i,k), re_qc_max_thmpsn))*1.e6
-                  effri(i,k) = MAX(re_qi_min_thmpsn, MIN(effri(i,k), re_qi_max_thmpsn))*1.e6
-                  effrs(i,k) = MAX(re_qs_min_thmpsn, MIN(effrs(i,k), re_qs_max_thmpsn))*1.e6
+                  effrl(i,k) = MAX(re_qc_min_thompson, MIN(effrl(i,k), re_qc_max_thompson))*1.e6
+                  effri(i,k) = MAX(re_qi_min_thompson, MIN(effri(i,k), re_qi_max_thompson))*1.e6
+                  effrs(i,k) = MAX(re_qs_min_thompson, MIN(effrs(i,k), re_qs_max_thompson))*1.e6
                end do
-               effrl(i,lmk) = re_qc_min_thmpsn*1.e6
-               effri(i,lmk) = re_qi_min_thmpsn*1.e6
-               effrs(i,lmk) = re_qs_min_thmpsn*1.e6
+               effrl(i,lmk) = re_qc_min_thompson*1.e6
+               effri(i,lmk) = re_qi_min_thompson*1.e6
+               effrs(i,lmk) = re_qs_min_thompson*1.e6
             else
                call calc_effectRad_tempo(t1d=tlyr(i,:), p1d=plyr(i,:)*100., qv1d=qv_mp(i,:), qc1d=qc_mp(i,:),   &
                     nc1d=nc_mp(i,:), qi1d=qi_mp(i,:), ni1d=ni_mp(i,:), qs1d=qs_mp(i,:), &
@@ -993,15 +991,13 @@
 !  --- add suspended convective cloud water to grid-scale cloud water
 !      only for cloud fraction & radiation computation
 !      it is to enhance cloudiness due to suspended convec cloud water
-!      for zhao/moorthi's (imp_phys=99) &
-!          ferrier's (imp_phys=5) microphysics schemes
+!      for ferrier's (imp_phys=5) microphysics schemes
 
-        if ((num_p3d == 4) .and. (npdf3d == 3)) then       ! same as imp_physics = imp_physics_zhao_carr_pdf
+        if ((num_p3d == 4) .and. (npdf3d == 3)) then     
           do k=1,lm
             k1 = k + kd
             do i=1,im
               !GJF: this is not consistent with GFS_typedefs,
-              !     but it looks like the Zhao-Carr-PDF scheme is not in the CCPP
               deltaq(i,k1) = 0.0!Tbd%phy_f3d(i,k,5)      !GJF: this variable is not in phy_f3d anymore
               cnvw  (i,k1) = cnvw_in(i,k)
               cnvc  (i,k1) = cnvc_in(i,k)
@@ -1026,10 +1022,6 @@
           enddo
         endif
 
-        if (imp_physics == imp_physics_zhao_carr) then
-          ccnd(1:IM,1:LMK,1) = ccnd(1:IM,1:LMK,1) + cnvw(1:IM,1:LMK)
-        endif
-
 !> - Call radiation_clouds_prop() to calculate cloud properties.
         call radiation_clouds_prop                                      &
      &     ( plyr, plvl, tlyr, tvly, qlyr, qstl, rhly,                  &    !  ---  inputs:
@@ -1040,7 +1032,6 @@
      &       imp_physics, imp_physics_nssl, imp_physics_fer_hires,      &
      &       imp_physics_gfdl, imp_physics_thompson,                    &
      &       imp_physics_wsm6, imp_physics_tempo,                       &
-     &       imp_physics_zhao_carr, imp_physics_zhao_carr_pdf,          &
      &       imp_physics_mg, iovr, iovr_rand, iovr_maxrand, iovr_max,   &
      &       iovr_dcorr, iovr_exp, iovr_exprand, idcor, idcor_con,      &
      &       idcor_hogan, idcor_oreopoulos, lcrick, lcnorm,             &
@@ -1051,7 +1042,7 @@
      &       effrl_inout, effri_inout, effrs_inout,                     &
      &       lwp_ex, iwp_ex, lwp_fc, iwp_fc,                            &
      &       dzb, xlat_d, julian, yearlen, gridkm, top_at_1, si,        &
-     &       con_ttp, con_pi, con_g, con_rd, con_thgni,                 &
+     &       xr_con, xr_exp, con_ttp, con_pi, con_g, con_rd, con_thgni, &
      &       cld_frac, cld_lwp, cld_reliq, cld_iwp, cld_reice,          &    !  ---  outputs:
      &       cld_rwp, cld_rerain, cld_swp, cld_resnow,                  &    !  ---  outputs:
      &       cldsa, mtopa, mbota, de_lgth, alpha                        &    !  ---  outputs:

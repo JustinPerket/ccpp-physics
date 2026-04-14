@@ -1,6 +1,5 @@
 module mp_tempo_post
 
-   use mpi_f08
    use machine, only : kind_phys
 
    implicit none
@@ -52,24 +51,21 @@ contains
 !> \section arg_table_mp_tempo_post_run Argument Table
 !! \htmlinclude mp_tempo_post_run.html
 !!
-   subroutine mp_tempo_post_run(ncol, nlev, tgrs_save, tgrs, prslk, dtp, ttendlim, &
-                                   kdt, mpicomm, mpirank, mpiroot, errmsg, errflg)
+   subroutine mp_tempo_post_run(ncol, nlev, dtgrs, tgrs, prslk, dtp, ttendlim, &
+                                   kdt, errmsg, errflg)
 
       implicit none
 
       ! Interface variables
       integer,                         intent(in)    :: ncol
       integer,                         intent(in)    :: nlev
-      real(kind_phys), dimension(:,:), intent(in)    :: tgrs_save
-      real(kind_phys), dimension(:,:), intent(inout) :: tgrs
+      real(kind_phys), dimension(:,:), intent(in)    :: tgrs
+      real(kind_phys), dimension(:,:), intent(inout) :: dtgrs
       real(kind_phys), dimension(:,:), intent(in)    :: prslk
       real(kind_phys),                 intent(in)    :: dtp
       real(kind_phys),                 intent(in)    :: ttendlim
       integer,                         intent(in)    :: kdt
-      ! MPI information
-      type(MPI_Comm),   intent(in   ) :: mpicomm
-      integer,          intent(in   ) :: mpirank
-      integer,          intent(in   ) :: mpiroot
+
       ! CCPP error handling
       character(len=*), intent(  out) :: errmsg
       integer,          intent(  out) :: errflg
@@ -96,23 +92,23 @@ contains
       if (.not.apply_limiter) return
 
       ! mp_tend and ttendlim are expressed in potential temperature
-      mp_tend = (tgrs - tgrs_save)/prslk
+      mp_tend = dtgrs/prslk
 
 #ifdef DEBUG
       events = 0
 #endif
       do k=1,nlev
          do i=1,ncol
-            mp_tend(i,k) = max( -ttendlim*dtp, min( ttendlim*dtp, mp_tend(i,k) ) )
+            mp_tend(i,k) = max( -ttendlim, min( ttendlim, mp_tend(i,k) ) )
 
 #ifdef DEBUG
-            if (tgrs_save(i,k) + mp_tend(i,k)*prslk(i,k) .ne. tgrs(i,k)) then
+            if (mp_tend(i,k)*prslk(i,k) .ne. dtgrs(i,k)) then
               write(0,'(a,3i6,3e16.7)') "mp_tempo_post_run mp_tend limiter: kdt, i, k, t_old, t_new, t_lim:", &
-                                      & kdt, i, k, tgrs_save(i,k), tgrs(i,k), tgrs_save(i,k) + mp_tend(i,k)*prslk(i,k)
+                                      & kdt, i, k, tgrs(i,k), tgrs(i,k) + dtp*dtgrs(i,k), tgrs(i,k) + dtp*mp_tend(i,k)*prslk(i,k)
               events = events + 1
             end if
 #endif
-            tgrs(i,k) = tgrs_save(i,k) + mp_tend(i,k)*prslk(i,k)
+            dtgrs(i,k) = mp_tend(i,k)*prslk(i,k)
          end do
       end do
 

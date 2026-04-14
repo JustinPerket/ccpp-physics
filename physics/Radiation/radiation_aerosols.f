@@ -574,6 +574,7 @@
         call wrt_aerlog(iaermdl, iaerflg, lalw1bd, errflg, errmsg)      ! write aerosol param info to log file
 !  ---  inputs:   (in scope variables)
 !  ---  outputs:  (CCPP error handling)
+        if(errflg/=0) return
 
       endif
 
@@ -627,6 +628,7 @@
      &        errflg, errmsg)
 !  ---  inputs:   (module constants)
 !  ---  outputs:  (ccpp error handling)
+        if(errflg/=0) return
 
 !> -# Call clim_aerinit() to invoke tropospheric aerosol initialization.
 
@@ -636,6 +638,7 @@
      &     ( solfwv, eirfwv, me, aeros_file,                            &
 !  ---  outputs:
      &     errflg, errmsg)
+          if(errflg/=0) return
 
         elseif ( iaermdl==1 .or. iaermdl==2 .or. iaermdl==6) then  ! gocart clim/prog scheme
 
@@ -644,6 +647,7 @@
      &     ( solfwv, eirfwv, me,                                        &
 !  ---  outputs:
      &     errflg, errmsg)
+          if(errflg/=0) return
 
         else
           if ( me == 0 ) then
@@ -779,7 +783,6 @@
         endif
       endif     ! end if_iaerflg_block
 !
-      return
 !................................
       end subroutine wrt_aerlog
 !--------------------------------
@@ -890,7 +893,6 @@
         eirfwv(nw) = (tmp1 * tmp3**3) / (exp(tmp2*tmp3) - 1.0)
       enddo
 !
-      return
 !................................
       end subroutine set_spectrum
 !--------------------------------
@@ -938,7 +940,6 @@
         allocate ( ivolae(12,4,10) )   ! for 12-mon,4-lat_zone,10-year
       endif
 !
-      return
 !................................
       end subroutine set_volcaer
 !--------------------------------
@@ -1158,9 +1159,6 @@
      &        action='read',form='FORMATTED')
         rewind (NIAERCM)
       else
-        print *,'    Requested aerosol data file "',aeros_file,         &
-     &          '" not found!'
-        print *,'    *** Stopped in subroutine aero_init !!'
         errflg = 1
         errmsg = 'ERROR(set_aercoef): Requested aerosol data file '//   &
      &       aeros_file//' not found'
@@ -1192,6 +1190,15 @@
         allocate ( ssarhd (NRHLEV,NCM2,NSWLWBD) )
         allocate ( asyrhd (NRHLEV,NCM2,NSWLWBD) )
         allocate ( extstra(            NSWLWBD) )
+        extrhi  = f_zero
+        scarhi  = f_zero
+        ssarhi  = f_zero
+        asyrhi  = f_zero
+        extrhd  = f_zero
+        scarhd  = f_zero
+        ssarhd  = f_zero
+        asyrhd  = f_zero
+        extstra = f_zero
       endif
 
 !>  - ending wave num for 61 aerosol spectral bands
@@ -1287,7 +1294,9 @@
           endif
         enddo
 
-!$omp parallel do private(ib,mb,ii,iw1,iw2,iw,sumsol,fac,tmp,ibs,ibe)
+! Turn off OpenMP due to b4b differences with Intel LLVM 2025.2+
+! https://github.com/NCAR/ccpp-physics/issues/1170
+!!! !$omp parallel do private(ib,mb,ii,iw1,iw2,iw,sumsol,fac,tmp,ibs,ibe)
         do ib = 1, NSWBND
           mb = ib + NSWSTR - 1
           ii = 1
@@ -1374,8 +1383,9 @@
             endif
           enddo
         endif
-
-!$omp parallel do private(ib,ii,iw1,iw2,iw,mb,sumir,fac,tmp,ibs,ibe)
+! Turn off OpenMP due to b4b differences with Intel LLVM 2025.2+
+! https://github.com/NCAR/ccpp-physics/issues/1170
+!!! !$omp parallel do private(ib,ii,iw1,iw2,iw,mb,sumir,fac,tmp,ibs,ibe)
         do ib = 1, NLWBND
           ii = 1
           if ( NLWBND == 1 ) then
@@ -1488,7 +1498,6 @@
 !       print *,' extstra:', extstra(ii)
 !     enddo
 !
-      return
 !................................
       end subroutine set_aercoef
 !--------------------------------
@@ -1746,7 +1755,6 @@
         enddo   !  end do_nb_block for lw
       endif   !  end if_lalwflg_block
 !
-      return
 !................................
       end subroutine optavg
 !--------------------------------
@@ -1812,7 +1820,6 @@
       if ( imon < 1 .or. imon > 12 ) then
         print *,' ***** ERROR in specifying requested month !!! ',      &
      &          'imon=', imon
-        print *,' ***** STOPPED in subroutinte aer_update !!!'
         errflg = 1
         errmsg = 'ERROR(aer_update): Requested month not valid'
         return
@@ -1823,6 +1830,7 @@
 
         if ( iaermdl == 0 .or. iaermdl==5 ) then    ! opac-climatology scheme
         call trop_update(aeros_file, errflg, errmsg)
+        if(errflg/=0) return
         endif
 
       endif
@@ -1914,9 +1922,6 @@
           print *,'   Opened aerosol data file: ',aeros_file
         endif
       else
-        print *,'    Requested aerosol data file "',aeros_file,         &
-     &          '" not found!'
-        print *,'    *** Stopped in subroutine trop_update !!'
         errflg = 1
         errmsg = 'ERROR(trop_update):Requested aerosol data file '//    &
      &       aeros_file // ' not found.'
@@ -2003,7 +2008,6 @@
 !     print 17,kprfg
 ! 17  format(8e16.9)
 !
-      return
 !................................
       end subroutine trop_update
 !--------------------------------
@@ -2123,9 +2127,6 @@
 
             close (NIAERCM)
           else
-            print *,'   Requested volcanic data file "',                &
-     &              volcano_file,'" not found!'
-            print *,'   *** Stopped in subroutine VOLC_AERINIT !!'
             errflg = 1
             errmsg = 'ERROR(volc_update): Requested volcanic data '//   &
      &              'file '//volcano_file//' not found!'
@@ -2143,7 +2144,6 @@
         print *,  ivolae(kmonsav,:,k)
       endif
 !
-      return
 !................................
       end subroutine volc_update
 !--------------------------------
@@ -2292,33 +2292,11 @@
       errmsg = ''
       errflg = 0
 
-      do m = 1, NF_AESW
-        do j = 1, NBDSW
-          do k = 1, NLAY
-            do i = 1, IMAX
-              aerosw(i,k,j,m) = f_zero
-            enddo
-          enddo
-        enddo
-      enddo
-
-      do m = 1, NF_AELW
-        do j = 1, NBDLW
-          do k = 1, NLAY
-            do i = 1, IMAX
-              aerolw(i,k,j,m) = f_zero
-            enddo
-          enddo
-        enddo
-      enddo
-
+      aerosw = f_zero
+      aerolw = f_zero
 !     sumodp = f_zero
-      do i = 1, IMAX
-       do k = 1, NSPC1
-         aerodp(i,k) = f_zero
-       enddo
-      enddo
-      ext550(:,:) = f_zero
+      aerodp = f_zero
+      ext550 = f_zero
 
       if ( .not. (lsswr .or. lslwr) ) then
         return
@@ -2395,7 +2373,7 @@
 !!      subroutine computes sw + lw aerosol optical properties for gocart
 !!      aerosol species (merged from fcst and clim fields).
 
-          if ( iaermdl==0 .or. iaermdl==5 ) then  ! use opac aerosol climatology
+        if ( iaermdl==0 .or. iaermdl==5 ) then  ! use opac aerosol climatology
 
           call aer_property                                               &
 !  ---  inputs:
@@ -2408,7 +2386,7 @@
      &       )
 
 !
-          elseif ( iaermdl==1 .or. iaermdl==2 .or. iaermdl==6) then ! use gocart aerosols
+        elseif ( iaermdl==1 .or. iaermdl==2 .or. iaermdl==6) then ! use gocart aerosols
 
           call aer_property_gocart                                        &
 !  ---  inputs:
@@ -2419,7 +2397,7 @@
      &         aerosw,aerolw,aerodp,ext550,errflg,errmsg                  &
      &       )
         endif     ! end if_iaerflg_block
-
+        if(errflg/=0) return
 
 !  ---  check print
 !       do m = 1, NBDSW
@@ -2742,7 +2720,6 @@
 
       endif   ! end if_lavoflg_block
 !
-      return
 !...................................
       end subroutine setaer
 !-----------------------------------
@@ -2916,7 +2893,7 @@
               print *,' ERROR! In setclimaer alon>360. ipt =',i,        &
      &           ',  dltg,alon,tlon,dlon =',dltg,alon(i),tmp1,dtmp
               errflg = 1
-              errmsg = 'ERROR(aer_property)'
+              errmsg = 'ERROR(aer_property) alon > 360'
               return
             endif
           elseif ( dtmp >= f_zero ) then
@@ -2936,7 +2913,7 @@
               print *,' ERROR! In setclimaer alon< 0. ipt =',i,         &
      &           ',  dltg,alon,tlon,dlon =',dltg,alon(i),tmp1,dtmp
               errflg = 1
-              errmsg = 'ERROR(aer_property)'
+              errmsg = 'ERROR(aer_property) alon < 0'
               return
             endif
           endif
@@ -2957,7 +2934,7 @@
               print *,' ERROR! In setclimaer alat<-90. ipt =',i,        &
      &           ',  dltg,alat,tlat,dlat =',dltg,alat(i),tmp2,dtmp
               errflg = 1
-              errmsg = 'ERROR(aer_property)'
+              errmsg = 'ERROR(aer_property) alat < -90'
               return
             endif
           elseif ( dtmp >= f_zero ) then
@@ -2977,7 +2954,7 @@
               print *,' ERROR! In setclimaer alat>90. ipt =',i,         &
      &           ',  dltg,alat,tlat,dlat =',dltg,alat(i),tmp2,dtmp
               errflg = 1
-              errmsg = 'ERROR(aer_property)'
+              errmsg = 'ERROR(aer_property) alat > 90'
               return
             endif
           endif
@@ -3512,7 +3489,6 @@
       endif
 
 !
-      return
 !................................
       end subroutine radclimaer
 !--------------------------------
@@ -3940,10 +3916,9 @@
          open (unit=niaercm, file=fin, status='OLD')
          rewind(niaercm)
        else
-         print *,' Requested luts file ',trim(fin),' not found'
-         print *,' ** Stopped in rd_gocart_luts ** '
          errflg = 1
-         errmsg = 'Requested luts file '//trim(fin)//' not found'
+         errmsg = 'ERROR(rd_gocart_luts): Requested luts file '//       &
+     &              trim(fin)//' not found'
          return
        endif      ! end if_file_exist_block
 
@@ -4007,10 +3982,9 @@
           open (unit=niaercm, file=fin, status='OLD')
           rewind(niaercm)
         else
-          print *,' Requested luts file ',trim(fin),' not found'
-          print *,' ** Stopped in rd_gocart_luts ** '
           errflg = 1
-          errmsg = 'Requested luts file '//trim(fin)//' not found'
+          errmsg = 'ERROR(rd_gocart_luts): Requested luts file '//      &
+     &              trim(fin)//' not found'
           return
         endif      ! end if_file_exist_block
 
@@ -4072,7 +4046,6 @@
 
        enddo       !! ib-loop
 
-      return
 !...................................
       end subroutine rd_gocart_luts
 !-----------------------------------
@@ -4299,8 +4272,6 @@
         enddo   !  end do_nb_block for lw
       endif   !  end if_lalwflg_block
 !
-      return
-      return
 !...................................
       end subroutine optavg_gocart
 !-----------------------------------
@@ -4693,7 +4664,6 @@
 
         enddo         ! end_do_ib_loop
 !
-      return
 !................................
       end subroutine aeropt
 !--------------------------------

@@ -9,9 +9,7 @@ module rrtmgp_sw_gas_optics
   use mo_gas_concentrations,  only: ty_gas_concs
   use radiation_tools,        only: check_error_msg
   use netcdf
-#ifdef MPI
   use mpi_f08
-#endif
 
   implicit none
   real(wp),parameter :: &
@@ -85,7 +83,7 @@ contains
 !! the full k-distribution data is read in, reduced by the "active gases" provided, and
 !! loaded into the RRTMGP DDT, ty_gas_optics_rrtmgp.
   subroutine rrtmgp_sw_gas_optics_init(rrtmgp_root_dir, rrtmgp_sw_file_gas,              &
-       active_gases_array, mpicomm, mpirank, mpiroot, errmsg, errflg)
+       active_gases_array, mpicomm, mpirank, mpiroot1, errmsg, errflg)
 
     ! Inputs
     character(len=128),intent(in) :: &
@@ -97,7 +95,8 @@ contains
          mpicomm             !< MPI communicator
     integer,intent(in) :: &
          mpirank,          & !< Current MPI rank
-         mpiroot             !< Master MPI rank
+         mpiroot1            !< Master MPI rank
+    integer :: mpiroot
 
     ! Outputs
     character(len=*), intent(out) :: &
@@ -115,6 +114,7 @@ contains
     errmsg = ''
     errflg = 0
 
+    mpiroot = 0
     ! Filenames are set in the gfphysics_nml
     sw_gas_props_file   = trim(rrtmgp_root_dir)//trim(rrtmgp_sw_file_gas)
 
@@ -124,9 +124,7 @@ contains
     ! (ONLY master processor(0), if MPI enabled)
     !
     ! #######################################################################################
-#ifdef MPI
     if (mpirank .eq. mpiroot) then
-#endif
        write (*,*) 'Reading RRTMGP shortwave k-distribution metadata ... '
 
        ! Open file
@@ -162,7 +160,6 @@ contains
        status = nf90_inq_dimid(ncid, 'minor_absorber_intervals_upper', dimid)
        status = nf90_inquire_dimension(ncid, dimid, len=nminor_absorber_intervals_upperSW)
 
-#ifdef MPI
     endif ! On master processor
 
     ! Other processors waiting...
@@ -188,7 +185,6 @@ contains
     call mpi_bcast(ncontributors_lowerSW,             1, MPI_INTEGER, mpiroot, mpicomm, mpierr)
     call mpi_bcast(nminor_absorber_intervals_upperSW, 1, MPI_INTEGER, mpiroot, mpicomm, mpierr)
     call mpi_bcast(nminor_absorber_intervals_lowerSW, 1, MPI_INTEGER, mpiroot, mpicomm, mpierr)
-#endif
 
     ! #######################################################################################
     !
@@ -269,9 +265,7 @@ contains
     ! (ONLY master processor(0), if MPI enabled) 
     !
     ! #######################################################################################
-#ifdef MPI
     if (mpirank .eq. mpiroot) then
-#endif
        write (*,*) 'Reading RRTMGP shortwave k-distribution data ... '
        status = nf90_inq_varid(ncid, 'gas_names', varID)
        status = nf90_get_var(  ncid, varID, gas_namesSW)       
@@ -368,7 +362,6 @@ contains
        
        ! Close
        status = nf90_close(ncid)
-#ifdef MPI
     endif ! Master process
 
     ! Other processors waiting...
@@ -500,7 +493,6 @@ contains
          size(scale_by_complement_upperSW),       MPI_LOGICAL,          mpiroot, mpicomm, mpierr)
 
     call mpi_barrier(mpicomm, mpierr)
-#endif
 
     ! #######################################################################################
     !   
