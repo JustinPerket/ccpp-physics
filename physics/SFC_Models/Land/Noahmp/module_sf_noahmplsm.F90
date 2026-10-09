@@ -2201,7 +2201,7 @@ endif   ! croptype == 0
 
        if(sh2o(1) < 0.01 .and. snowh == 0.) rsurf = 1.e6
        psi   = -parameters%psisat(1)*(max(0.01,sh2o(1))/parameters%smcmax(1))**(-parameters%bexp(1))   
-       rhsur = fsno + (1.-fsno) * exp(psi*grav/(rw*tg)) 
+       rhsur = fsno + (1.-fsno) * max(0.0, min( ((sh2o(1)-parameters%smcwlt(1))/(parameters%smcmax(1)-parameters%smcwlt(1)))**0.5  , 1.0 ) )
      end if
 
 ! urban - jref 
@@ -3952,6 +3952,7 @@ endif   ! croptype == 0
   real (kind=kind_phys) :: qfx          !moisture flux
   real (kind=kind_phys) :: e1           
   real (kind=kind_phys) :: hcv          !canopy heat capacity j/m2/k, C.He added 
+  real (kind=kind_phys) :: esurf        !surface vapor pressure
 
   real (kind=kind_phys) :: vaie         !total leaf area index + stem area index,effective
   real (kind=kind_phys) :: laisune      !sunlit leaf area index, one-sided (m2/m2),effective
@@ -4212,10 +4213,10 @@ endif   ! croptype == 0
         end if
 
         if (opt_crs == 2) then  ! jarvis
-         call  canres (parameters,ep_2, epsm1,parsun,tv    ,btran ,eah    ,sfcprs, & !in
+         call  canres (parameters,ep_2, epsm1,parsun,sfctmp,btran ,eah    ,sfcprs, & !in
                        rssun ,psnsun,iloc  ,jloc   )          !out
 
-         call  canres (parameters,ep_2, epsm1,parsha,tv    ,btran ,eah    ,sfcprs, & !in
+         call  canres (parameters,ep_2, epsm1,parsha,sfctmp,btran ,eah    ,sfcprs, & !in
                        rssha ,psnsha,iloc  ,jloc   )          !out
         end if
      end if
@@ -4320,9 +4321,15 @@ endif   ! croptype == 0
             destg = dsati
         end if
 
+        esurf = estg*rhsur
+        if(estg > eah .and. eah > esurf) then
+          esurf = eah
+          destg = 0.0
+        end if
+
         irg = cir*tg**4 + air
         shg = csh * (tg         - tah         )
-        evg = cev * (estg*rhsur - eah         )
+        evg = cev * (esurf      - eah         )
         gh  = cgh * (tg         - stc(isnow+1))
 
         b = sag-irg-shg-evg-gh+pahg
@@ -4354,7 +4361,7 @@ endif   ! croptype == 0
         if(opt_stc == 3) tg  = (1.-fsno)*tg + fsno*tfrz   ! mb: allow tg>0c during melt v3.7
         irg = cir*tg**4 - emg*(1.-emv)*lwdn - emg*emv*sb*tv**4
         shg = csh * (tg         - tah)
-        evg = cev * (estg*rhsur - eah)
+        evg = cev * (esurf - eah)
         gh  = sag+pahg - (irg+shg+evg)
      end if
      end if
@@ -4617,6 +4624,7 @@ endif   ! croptype == 0
   real (kind=kind_phys) :: esati      !es for ice
   real (kind=kind_phys) :: dsatw      !d(es)/dt at tg (pa/k) for water
   real (kind=kind_phys) :: dsati      !d(es)/dt at tg (pa/k) for ice
+  real (kind=kind_phys) :: esurf      !surface vapor pressure
 
   real (kind=kind_phys) :: a          !temporary calculation
   real (kind=kind_phys) :: b          !temporary calculation
@@ -4805,6 +4813,12 @@ endif   ! croptype == 0
             destg = dsati
         end if
 
+        esurf = estg*rhsur
+        if(estg > eair .and. eair > esurf) then
+          esurf = eair
+          destg = 0.0
+        end if
+
         csh = rhoair*cpair/rahb
         cev = rhoair*cpair/gamma/(rsurf+rawb)
 
@@ -4812,7 +4826,7 @@ endif   ! croptype == 0
 
         irb   = cir * tgb**4 - emg*lwdn
         shb   = csh * (tgb        - sfctmp      )
-        evb   = cev * (estg*rhsur - eair        )
+        evb   = cev * (esurf      - eair        )
         ghb   = cgh * (tgb        - stc(isnow+1))
 
         b     = sag-irb-shb-evb-ghb+pahb
@@ -4837,7 +4851,14 @@ endif   ! croptype == 0
         else
             estg  = esati
         end if
-        qsfc = ep_2*(estg*rhsur)/(psfc+epsm1*(estg*rhsur))
+
+        esurf = estg*rhsur
+        if(estg > eair .and. eair > esurf) then
+          esurf = eair
+          destg = 0.0
+        end if
+
+        qsfc = ep_2*esurf/(psfc+epsm1*esurf)
 
         qfx = (qsfc-qair)*cev*gamma/cpair
 
@@ -4852,7 +4873,7 @@ endif   ! croptype == 0
           if(opt_stc == 3) tgb  = (1.-fsno)*tgb + fsno*tfrz  ! mb: allow tg>0c during melt v3.7
           irb = cir * tgb**4 - emg*lwdn
           shb = csh * (tgb        - sfctmp)
-          evb = cev * (estg*rhsur - eair )          !estg reevaluate ?
+          evb = cev * (esurf - eair )          !estg reevaluate ?
           ghb = sag+pahb - (irb+shb+evb)
      end if
      end if
@@ -5896,6 +5917,11 @@ zolmax = xkrefsqr / sqrt(xkzo)   ! maximum z/L
 
         z0h_out = z0m_out
 
+      elseif (opt_trs == chen09) then
+
+        czil = 0.55
+        z0h_out = z0m_out * exp(-czil*0.4*258.2*sqrt(ustarx*z0m_out))
+
       elseif (opt_trs == tessel) then
 
         if (vegtyp <= 5) then
@@ -5904,7 +5930,7 @@ zolmax = xkrefsqr / sqrt(xkzo)   ! maximum z/L
           z0h_out = z0m_out * 0.01
         endif
 
-      elseif (opt_trs == chen09 .or. opt_trs == blumel99) then
+      elseif (opt_trs == blumel99) then
 
         reyn = ustarx*z0m_out/viscosity                      ! Blumel99 eqn 36c
         if (reyn > 2.0) then
